@@ -40,7 +40,7 @@ Licensed under a modified MIT License (with a no-reselling clause).
 3. Add the following to your `pubspec.yaml` file:
 ```yamld
 dependencies:
-  signals_translator: ^0.0.1
+  signals_translator: ^0.0.1+2
   
   [...]
   

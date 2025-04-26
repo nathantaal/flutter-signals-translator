@@ -1,7 +1,8 @@
 name: signals_translator
 description: "Translate your project 100% using signals"
-version: 0.0.1+1
-homepage:
+version: 0.0.1+2
+homepage: https://github.com/nathantaal/flutter-signals-translator
+repository: https://github.com/nathantaal/flutter-signals-translator
 
 environment:
   sdk: ^3.7.2
