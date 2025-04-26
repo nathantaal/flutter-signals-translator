@@ -1,0 +1,11 @@
+{
+  "language": "English",
+  "translations": {
+    "Dutch": "Dutch",
+    "English": "English",
+    "Spanish": "Spanish",
+    "He came in {0}, while his partner came in at the {1} place": "He came in {0}, while his partner came in at the {1} place",
+    "CAN_USE_KEY": "You can also use key-value pairs to translate",
+    "Signal Translator Example": "Signal Translator Example"
+  }
+}

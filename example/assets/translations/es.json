@@ -1,0 +1,11 @@
+{
+  "language": "Spanish",
+  "translations": {
+    "Dutch": "Holandés",
+    "English": "Inglés",
+    "Spanish": "Español",
+    "He came in {0}, while his partner came in at the {1} place": "Él llegó en {0}, mientras que su pareja llegó en el {1} lugar",
+    "CAN_USE_KEY": "También puedes usar pares clave-valor para traducir",
+    "Signal Translator Example": "Ejemplo de traductor de 'Signals'"
+  }
+}

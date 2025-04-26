@@ -1,0 +1,11 @@
+{
+  "language": "Dutch",
+  "translations": {
+    "Dutch": "Nederlands",
+    "English": "English",
+    "Spanish": "Español",
+    "He came in {0}, while his partner came in at the {1} place": "Zijn parter eindigde op de {1} plaats, terwijl hij op de {0} plaats eindigde",
+    "CAN_USE_KEY": "Je kunt ook sleutel-waardeparen gebruiken om te vertalen",
+    "Signal Translator Example": "'Signal' vertaler voorbeeld"
+  }
+}
