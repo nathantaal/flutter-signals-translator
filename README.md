@@ -7,7 +7,7 @@ This is not because of the package itself, but because I'm a Signals enthusiast.
 This package currently fits all my needs, but it might not fit yours.
 
 ## License
-Licensed under a modified MIT License (with a no-reselling clause).
+Licensed under a modified MIT License. 
 
 ## (Non) features
 * Supports singular only, does not support pluralization
@@ -70,7 +70,7 @@ SignalTranslator().setLanguage('en');
 
 5. To view the currently set language:
 ```dart
-SignalTranslator().setLanguage('en');
+SignalTranslator().currentLocale;
 ```
 This is done automatically when the app starts, but if you want to build in a language selector, you can use this method to highlight the currently selected language.
 
@@ -84,3 +84,6 @@ More features could be implemented. As my time is limited, feel free to open an 
 
 ## Credits
 All this is possible because of the best state management package out there: [Signals](https://pub.dev/packages/signals). Credits should go there :)
+
+## Development
+Publish extension using dart pub publish --dry-run

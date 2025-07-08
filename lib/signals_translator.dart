@@ -98,13 +98,6 @@ class SignalTranslator {
     }
     return translation;
   }
-
-  //Needed for resetting the tests :(
-  //TODO find another way
-  reset() {
-    SignalTranslator()._translations.value = {};
-    SignalTranslator()._chosenLocale.value = 'sys';
-  }
 }
 
 String tl(String key) {

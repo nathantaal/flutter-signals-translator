@@ -96,7 +96,6 @@ void main() {
     final prefs = await SharedPreferences.getInstance();
     await prefs.clear();
     mockBundle = null;
-    signalTranslator!.reset();
     signalTranslator = null;
   });
 
