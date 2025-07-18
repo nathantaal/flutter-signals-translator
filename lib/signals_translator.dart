@@ -53,7 +53,6 @@ class SignalTranslator {
     await prefs.setString('locale', locale);
   }
 
-  //TODO break into more computes and effects
   Future<void> loadLocale(String locale) async {
     _chosenLocale.value = locale;
 
@@ -63,15 +62,14 @@ class SignalTranslator {
     );
 
     // Access the "translations" key and map its contents
-    if (decodedJson.containsKey('translations')) {
-      Map<String, dynamic> translationsJson = decodedJson['translations'];
-      _translations.value = translationsJson.map(
-        (key, value) => MapEntry(key, value.toString()),
-      );
-    } else {
+    if (!decodedJson.containsKey('translations')) {
       throw Exception('Translations key not found in the JSON file');
     }
 
+    Map<String, dynamic> translationsJson = decodedJson['translations'];
+    _translations.value = translationsJson.map(
+          (key, value) => MapEntry(key, value.toString()),
+    );
     await _saveLocaleToStorage(locale);
   }
 
@@ -79,11 +77,7 @@ class SignalTranslator {
     await _sharedPreferencesCompleter.future;
     String? locale = prefs.getString('locale');
 
-    if (locale != null) {
-      await loadLocale(locale);
-      return;
-    }
-    await loadLocale(_deviceLocale.value);
+    locale != null ? await loadLocale(locale) : loadLocale(_deviceLocale.value);
   }
 
   String translate(String key) {
