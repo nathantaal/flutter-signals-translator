@@ -6,3 +6,6 @@
 
 ## 0.0.2
 * remove the reset function
+
+## 0.0.3
+* add support for (basic) pluralization

@@ -115,12 +115,12 @@ void main() {
         });
 
     // For the EN variant, there is chosen to stay native to the user so they can find there language easily
-    expect(signalTranslator!.translate('Dutch'), 'Dutch');
-    expect(signalTranslator!.translate('English'), 'English');
-    expect(signalTranslator!.translate('Spanish'), 'Spanish');
+    expect(tl('Dutch'), 'Dutch');
+    expect(tl('English'), 'English');
+    expect(tl('Spanish'), 'Spanish');
   });
 
-  test('Test other translations', () async {
+  test('Test changing language', () async {
     TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
         .setMockMessageHandler('flutter/assets', (message) async {
           final key = utf8.decode(message!.buffer.asUint8List());
@@ -136,26 +136,40 @@ void main() {
 
     // For the NL variant, the developer choose to not translate the languages, so the user can find their language easily
     await signalTranslator!.loadLocale('nl');
-    expect(signalTranslator!.translate('Dutch'), 'Nederlands');
-    expect(signalTranslator!.translate('English'), 'English');
-    expect(signalTranslator!.translate('Spanish'), 'Español');
+    expect(tl('Dutch'), 'Nederlands');
+    expect(tl('English'), 'English');
+    expect(tl('Spanish'), 'Español');
 
-    // For the ES variant, there is chosen to stay native to the user so they can find there language easily
+    // For the ES variant, there is chosen to stay native to the user so they can find a different language, in their own language, easily
     await signalTranslator!.loadLocale('es');
-    expect(signalTranslator!.translate('Dutch'), 'Holandés');
-    expect(signalTranslator!.translate('English'), 'Inglés');
-    expect(signalTranslator!.translate('Spanish'), 'Español');
+    expect(tl('Dutch'), 'Holandés');
+    expect(tl('English'), 'Inglés');
+    expect(tl('Spanish'), 'Español');
   });
 
-  test('it should fall back to key', () => {
-    //TODO
+  test('it should fall back to key', () async {
+    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+        .setMockMessageHandler('flutter/assets', (message) async {
+      final key = utf8.decode(message!.buffer.asUint8List());
+      if (mockBundle!._mockAssets.containsKey(key)) {
+        return ByteData.view(
+          Uint8List.fromList(
+            utf8.encode(mockBundle!._mockAssets[key]!),
+          ).buffer,
+        );
+      }
+      return null;
+    });
+
+    await signalTranslator!.loadLocale('en');
+    expect(tl('nonexistent_key'), 'nonexistent_key');
   });
 
   //Here you can explicitly reverse order of the variables
   //Normally, this is done for language that differ in grammar (for example, Germanic vs Romance languages)
   test('it should translate with variables', () async {
     await signalTranslator!.loadLocale('en');
-    var result = signalTranslator!.translateWithVariables(
+    var result = tlvm(
       "He came in {0}, while his partner came in at the {1} place",
       ["first", "fifth"],
     );
@@ -165,7 +179,7 @@ void main() {
     );
 
     await signalTranslator!.loadLocale('nl');
-    result = signalTranslator!.translateWithVariables(
+    result = tlvm(
       "He came in {0}, while his partner came in at the {1} place",
       ["eerste", "vijfde"],
     );
@@ -176,7 +190,7 @@ void main() {
   });
 
   test(
-    'it should translate using short tl function',
+    'Translating keys',
         () async {
           TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
               .setMockMessageHandler('flutter/assets', (message) async {
@@ -201,8 +215,107 @@ void main() {
 
   test(
     'it should retrieve saved locale from storage and translate using that',
-        () async {
-        //TODO
+    () async {
+      TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+          .setMockMessageHandler('flutter/assets', (message) async {
+        final key = utf8.decode(message!.buffer.asUint8List());
+        if (mockBundle!._mockAssets.containsKey(key)) {
+          return ByteData.view(
+            Uint8List.fromList(
+              utf8.encode(mockBundle!._mockAssets[key]!),
+            ).buffer,
+          );
+        }
+        return null;
+      });
+
+      // Save locale to storage
+      await signalTranslator!.loadLocale('es');
+      expect(tl('English'), 'Inglés');
+
+      // Simulate app restart by creating a new instance
+      signalTranslator = SignalTranslator();
+      await Future.delayed(const Duration(milliseconds: 100));
+
+      // Should retrieve 'es' from storage and use it
+      expect(signalTranslator!.currentLocale, 'es');
+      expect(tl('English'), 'Inglés');
     },
   );
+
+  test('Test pluralization for "I have {0} apples"', () async {
+    // Update mock asset to include plural key
+    const pluralJson = '''
+    {
+      "language": "English",
+      "translations": {
+        "I have {0} apples": {
+          "zero": "I have no apples",
+          "one": "I have 1 apple",
+          "other": "I have {0} apples"
+        }
+      }
+    }
+    ''';
+    mockBundle = MockAssetBundle({
+      'assets/translations/en.json': pluralJson,
+    });
+    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+        .setMockMessageHandler('flutter/assets', (message) async {
+          final key = utf8.decode(message!.buffer.asUint8List());
+          if (mockBundle!._mockAssets.containsKey(key)) {
+            return ByteData.view(
+              Uint8List.fromList(
+                utf8.encode(mockBundle!._mockAssets[key]!),
+              ).buffer,
+            );
+          }
+          return null;
+        });
+    await signalTranslator!.loadLocale('en');
+    expect(tlp('I have {0} apples', 0), 'I have no apples');
+    expect(tlp('I have {0} apples', 1), 'I have 1 apple');
+    expect(tlp('I have {0} apples', 2), 'I have 2 apples');
+    expect(tlp('I have {0} apples', 42), 'I have 42 apples');
+  });
+
+  test('Test pluralization for multiple counts (strawberries and bananas)', () async {
+    const pluralMultiJson = '''
+    {
+      "language": "English",
+      "translations": {
+        "I have {0} strawberries and {1} bananas": {
+          "zero_zero": "I have no strawberries and no bananas",
+          "one_one": "I have 1 strawberry and 1 banana",
+          "one_other": "I have 1 strawberry and {1} bananas",
+          "other_one": "I have {0} strawberries and 1 banana",
+          "other_other": "I have {0} strawberries and {1} bananas"
+        }
+      }
+    }
+    ''';
+    mockBundle = MockAssetBundle({
+      'assets/translations/en.json': pluralMultiJson,
+    });
+    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+        .setMockMessageHandler('flutter/assets', (message) async {
+          final key = utf8.decode(message!.buffer.asUint8List());
+          if (mockBundle!._mockAssets.containsKey(key)) {
+            return ByteData.view(
+              Uint8List.fromList(
+                utf8.encode(mockBundle!._mockAssets[key]!),
+              ).buffer,
+            );
+          }
+          return null;
+        });
+    await signalTranslator!.loadLocale('en');
+    expect(tlpm('I have {0} strawberries and {1} bananas', [0, 0]), 'I have no strawberries and no bananas');
+    expect(tlpm('I have {0} strawberries and {1} bananas', [1, 1]), 'I have 1 strawberry and 1 banana');
+    expect(tlpm('I have {0} strawberries and {1} bananas', [1, 3]), 'I have 1 strawberry and 3 bananas');
+    expect(tlpm('I have {0} strawberries and {1} bananas', [2, 1]), 'I have 2 strawberries and 1 banana');
+    expect(tlpm('I have {0} strawberries and {1} bananas', [2, 5]), 'I have 2 strawberries and 5 bananas');
+    // Fallback to key if not found
+    expect(tlpm('nonexistent_key', [1, 2]), 'nonexistent_key');
+  });
 }

@@ -4,8 +4,21 @@
     "Dutch": "Nederlands",
     "English": "English",
     "Spanish": "Español",
+    "{0} has won the game!": "{0} heeft het spel gewonnen!",
     "He came in {0}, while his partner came in at the {1} place": "Zijn parter eindigde op de {1} plaats, terwijl hij op de {0} plaats eindigde",
     "CAN_USE_KEY": "Je kunt ook sleutel-waardeparen gebruiken om te vertalen",
-    "Signal Translator Example": "'Signal' vertaler voorbeeld"
+    "Signal Translator Example": "'Signal' vertaler voorbeeld",
+    "I have {0} apples": {
+      "zero": "I heb geen appels",
+      "one": "I heb een appel",
+      "other": "Ik heb {0} appels"
+    },
+    "I have {0} strawberries and {1} bananas": {
+      "zero_zero": "Ik heb geen aardbeien en geen bananen",
+      "one_one": "Ik heb 1 aardbei en 1 banaan",
+      "one_other": "Ik heb 1 aardbei en {1} bananen",
+      "other_one": "Ik heb {0} aardbeien en 1 banaan",
+      "other_other": "Ik heb {0} aardbeien en {1} bananen"
+    }
   }
 }

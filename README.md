@@ -1,23 +1,26 @@
 **Until this package reaches 1.0.0, every version update *could* contain breaking changes. I'll try to deprecate things a few versions ahead**
 
 # Signal translator
-For my own project, I needed a lightweight translation solution that could be used in Flutter.
+This is a translation package for the Signals framework. It's not a pluralization package.
+
+For my own project, I needed a lightweight translation solution that could be used in dart.
 I previously used the `easy_localization` package, but I didn't like how it made my app re-render.
 This is not because of the package itself, but because I'm a Signals enthusiast.
-This package currently fits all my needs, but it might not fit yours.
+This package currently fits all my needs, but it might not fit yours. 
+Please read the (non) features section to see if this package fits your needs.
+And feel free to open an issue or a PR if you want to add something.
 
 ## License
-Licensed under a modified MIT License. 
+Licensed under a MIT License. 
 
 ## (Non) features
-* Supports singular only, does not support pluralization
-* Only supports JSON translation files
-* Does not support dates
-
-* Translates using signals
+* Supports singular and pluralization
 * Display app in system language by default
 * Support setting a different language
 * Supports setting system language as default
+* **Only supports JSON translation files**
+* **Does not support dates**
+
 
 ## Getting started
 ### important
@@ -40,7 +43,7 @@ Licensed under a modified MIT License.
 3. Add the following to your `pubspec.yaml` file:
 ```yamld
 dependencies:
-  signals_translator: ^0.0.1+2
+  signals_translator: ^0.0.3
   
   [...]
   
@@ -74,16 +77,70 @@ SignalTranslator().currentLocale;
 ```
 This is done automatically when the app starts, but if you want to build in a language selector, you can use this method to highlight the currently selected language.
 
-### Full example
+## Examples
+### Basic translation (tl)
+```json
+{
+  "English": "English"
+}
+```
+```dart
+Text(tl('English'));
+```
+
+### Translation with a variable (tlv)
+```json
+"{0} has won the game!": "{0} has won the game!"
+```
+```dart
+Text(tlv('{0} has won the game!', 'David'));
+```
+
+### Translation with multiple variables (tlvm)
+```json
+"He came in {0}, while his partner came in at the {1} place": "He came in {0}, while his partner came in at the {1} place",
+```
+```dart
+Text(tlvm('He came in {0}, while his partner came in at the {1} place', ['first', 'second']));
+```
+
+### Pluralization (tlp)
+```json
+    "I have {0} apples": {
+      "zero": "I have no apples",
+      "one": "I have 1 apple",
+      "other": "I have {0} apples"
+    },
+```
+```dart
+Text(tlp('I have {0} apples', 0)); // I have no apples
+Text(tlp('I have {0} apples', 1)); // I have 1 apple
+Text(tlp('I have {0} apples', 5)); // I have 5 apples
+```
+
+### Pluralization with multiple counts (tlpm)
+```json
+"I have {0} strawberries and {1} bananas": {
+  "zero_zero": "I have no strawberries and no bananas",
+  "one_one": "I have 1 strawberry and 1 banana",
+  "one_other": "I have 1 strawberry and {1} bananas",
+  "other_one": "I have {0} strawberries and 1 banana",
+  "other_other": "I have bo strawberries and {1} bananas"
+}
+```
+
+```dart
+Text(tlpm('I have {0} strawberries and {1} bananas', [1, 1])); // I have 1 strawberry and 1 banana
+Text(tlpm('I have {0} strawberries and {1} bananas', [0, 0])); // I have no strawberries and no bananas
+Text(tlpm('I have {0} strawberries and {1} bananas', [2, 3])); // I have bo strawberries and 3 bananas
+```
+
+#### Note on pluralization:
+For English, the text 'I have no strawberries and no bananas' is grammarly same as 'I have 0 strawberries and 0 bananas'. That means that you don't have to add a 'zero' entry for 'no strawberries and no bananas'. zero and other is sufficient. But for 
 See the 'example' folder for a complete example.
-
-
-## Additional features
-More features could be implemented. As my time is limited, feel free to open an issue and I will look into when I have time.
-- Planned for Q3: a dropdown menu to select the language
-
-## Credits
-All this is possible because of the best state management package out there: [Signals](https://pub.dev/packages/signals). Credits should go there :)
 
 ## Development
 Publish extension using dart pub publish --dry-run
+
+## Considerations
+* Plural 'like there are / is  5 / winners' is not supported yet, might consider ICU here for the future..

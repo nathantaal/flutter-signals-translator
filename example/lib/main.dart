@@ -38,16 +38,32 @@ void main() async {
                     ),
                   ],
                 ),
+                Text('Translate (tl) examples:', style: TextStyle(fontWeight: FontWeight.bold)),
                 Text(tl('Dutch')),
                 Text(tl('English')),
                 Text(tl('Spanish')),
+                Text(tl('CAN_USE_KEY')),
+                Text('Tranlate with variable (tlv) example:', style: TextStyle(fontWeight: FontWeight.bold)),
                 Text(
                   tlv(
+                    '{0} has won the game', 'David',
+                  ),
+                ),
+                Text('Translate with multiple variables (tlmv) example:', style: TextStyle(fontWeight: FontWeight.bold)),
+                Text(
+                  tlvm(
                     'He came in {0}, while his partner came in at the {1} place',
                     ['first', 'second'],
                   ),
                 ),
-                Text(tl('CAN_USE_KEY')),
+                Text('Pluralization (tlp) examples:', style: TextStyle(fontWeight: FontWeight.bold)),
+                Text(tlp('I have {0} apples', 0) ?? ''), // I have no apples
+                Text(tlp('I have {0} apples', 1) ?? ''), // I have 1 apple
+                Text(tlp('I have {0} apples', 5) ?? ''), // I have 5 apples
+                Text('Pluralization with multiple counts (tlpm) examples:', style: TextStyle(fontWeight: FontWeight.bold)),
+                Text(tlpm('I have {0} strawberries and {1} bananas', [1, 1]) ?? ''), // I have 1 strawberry and 1 banana
+                Text(tlpm('I have {0} strawberries and {1} bananas', [0, 0]) ?? ''), // I have no strawberries and no bananas
+                Text(tlpm('I have {0} strawberries and {1} bananas', [2, 3]) ?? ''), // I have bo strawberries and 3 bananas
               ],
             ),
           ),
