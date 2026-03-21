@@ -67,6 +67,13 @@ class SignalTranslator with WidgetsBindingObserver {
 
   String get currentLocale => _chosenLocale.value;
 
+  /// Resolves once SharedPreferences has been initialized. Note: this does
+  /// NOT wait for the initial locale-to-translations load triggered by
+  /// `_loadLocaleFromStorage` — translations may still be empty when this
+  /// completes. Use [activeLocale] or a `Watch` to react to the first
+  /// successful load.
+  Future<void> get ready => _sharedPreferencesCompleter.future;
+
   /// Returns the current locale reported by the operating system.
   ///
   /// This value updates when the platform locale changes.
