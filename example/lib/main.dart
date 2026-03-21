@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:signals/signals_flutter.dart';
 import 'package:signals_translator/signals_translator.dart';
+import 'icu_example_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -13,7 +14,8 @@ void main() async {
           appBar: AppBar(
             title: Text(tl('Signal Translator Example')),
           ),
-          body: Center(
+          body: Builder(
+            builder: (context) => Center(
             child: Column(
               children: [
                 Row(
@@ -57,16 +59,25 @@ void main() async {
                   ),
                 ),
                 Text('Pluralization (tlp) examples:', style: TextStyle(fontWeight: FontWeight.bold)),
-                Text(tlp('I have {0} apples', 0) ?? ''), // I have no apples
-                Text(tlp('I have {0} apples', 1) ?? ''), // I have 1 apple
-                Text(tlp('I have {0} apples', 5) ?? ''), // I have 5 apples
+                Text(tlp('I have {0} apples', 0)), // I have no apples
+                Text(tlp('I have {0} apples', 1)), // I have 1 apple
+                Text(tlp('I have {0} apples', 5)), // I have 5 apples
                 Text('Pluralization with multiple counts (tlpm) examples:', style: TextStyle(fontWeight: FontWeight.bold)),
-                Text(tlpm('I have {0} strawberries and {1} bananas', [1, 1]) ?? ''), // I have 1 strawberry and 1 banana
-                Text(tlpm('I have {0} strawberries and {1} bananas', [0, 0]) ?? ''), // I have no strawberries and no bananas
-                Text(tlpm('I have {0} strawberries and {1} bananas', [2, 3]) ?? ''), // I have bo strawberries and 3 bananas
+                Text(tlpm('I have {0} strawberries and {1} bananas', [1, 1])), // I have 1 strawberry and 1 banana
+                Text(tlpm('I have {0} strawberries and {1} bananas', [0, 0])), // I have no strawberries and no bananas
+                Text(tlpm('I have {0} strawberries and {1} bananas', [2, 3])), // I have 2 strawberries and 3 bananas
+                const SizedBox(height: 16),
+                ElevatedButton.icon(
+                  icon: const Icon(Icons.translate),
+                  label: const Text('Open ICU Examples'),
+                  onPressed: () => Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (_) => IcuExampleScreen()),
+                  ),
+                ),
               ],
             ),
-          ),
+          )),
         ),
       ),
     ),

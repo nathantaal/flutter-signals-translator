@@ -19,6 +19,12 @@
       "one_other": "Tengo 1 fresa y {1} plátanos",
       "other_one": "Tengo {0} fresas y 1 plátano",
       "other_other": "Tengo {0} fresas y {1} plátanos"
-    }
+    },
+    "ICU Examples": "Ejemplos de ICU",
+    "inbox_count": "Tienes {0, plural, =0 {ningún mensaje} one {# mensaje} other {# mensajes}} en tu bandeja.",
+    "winner_announcement": "¡{0, plural, one {Hay # ganador} other {Hay # ganadores}}!",
+    "cart_summary": "Tu carrito tiene {0, plural, =0 {ningún artículo} one {# artículo} other {# artículos}} y {1, plural, =0 {ningún cupón} one {# cupón} other {# cupones}} aplicados.",
+    "reaction": "{0, select, female {Ella} male {Él} other {Elle}} le gustó tu publicación.",
+    "search_results": "Se {0, plural, =0 {encontraron ningún resultado} one {encontró # resultado} other {encontraron # resultados}} para \"{1}\"."
   }
 }

@@ -14,11 +14,17 @@
       "other": "I have {0} apples"
     },
     "I have {0} strawberries and {1} bananas": {
-      "zero_zero": "No tengo fresas ni plátanos",
-      "one_one": "Tengo 1 fresa y 1 plátano",
-      "one_other": "Tengo 1 fresa y {1} plátanos",
-      "other_one": "Tengo {0} fresas y 1 plátano",
-      "other_other": "Tengo {0} fresas y {1} plátanos"
-    }
+      "zero_zero": "I have no strawberries and no bananas",
+      "one_one": "I have 1 strawberry and 1 banana",
+      "one_other": "I have 1 strawberry and {1} bananas",
+      "other_one": "I have {0} strawberries and 1 banana",
+      "other_other": "I have {0} strawberries and {1} bananas"
+    },
+    "ICU Examples": "ICU Examples",
+    "inbox_count": "You have {0, plural, =0 {no messages} one {# message} other {# messages}} in your inbox.",
+    "winner_announcement": "There {0, plural, one {is # winner} other {are # winners}}!",
+    "cart_summary": "Your cart has {0, plural, =0 {no items} one {# item} other {# items}} and {1, plural, =0 {no coupons} one {# coupon} other {# coupons}} applied.",
+    "reaction": "{0, select, female {She} male {He} other {They}} liked your post.",
+    "search_results": "Found {0, plural, =0 {no results} one {# result} other {# results}} for \"{1}\"."
   }
 }

@@ -4,8 +4,6 @@ import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:signals_translator/signals_translator.dart';
-import 'package:mockito/mockito.dart';
-
 class MockAssetBundle extends CachingAssetBundle {
   final Map<String, String> _mockAssets;
 
@@ -29,9 +27,6 @@ class MockAssetBundle extends CachingAssetBundle {
     throw FlutterError('Unable to load asset: $key');
   }
 }
-
-class MockSignalTranslator extends Mock implements SignalTranslator {}
-
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -89,6 +84,17 @@ void main() {
     });
 
     signalTranslator = SignalTranslator();
+
+    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+        .setMockMessageHandler('flutter/assets', (message) async {
+      final key = utf8.decode(message!.buffer.asUint8List());
+      if (mockBundle!._mockAssets.containsKey(key)) {
+        return ByteData.view(
+          Uint8List.fromList(utf8.encode(mockBundle!._mockAssets[key]!)).buffer,
+        );
+      }
+      return null;
+    });
   });
 
   tearDown(() async {
@@ -235,7 +241,7 @@ void main() {
 
       // Simulate app restart by creating a new instance
       signalTranslator = SignalTranslator();
-      await Future.delayed(const Duration(milliseconds: 100));
+      await signalTranslator!.ready;
 
       // Should retrieve 'es' from storage and use it
       expect(signalTranslator!.currentLocale, 'es');
@@ -317,5 +323,143 @@ void main() {
     expect(tlpm('I have {0} strawberries and {1} bananas', [2, 5]), 'I have 2 strawberries and 5 bananas');
     // Fallback to key if not found
     expect(tlpm('nonexistent_key', [1, 2]), 'nonexistent_key');
+  });
+
+  group('ICU message format', () {
+    const icuJson = '''
+    {
+      "language": "English",
+      "translations": {
+        "inbox":        "You have {0, plural, =0 {no messages} one {# message} other {# messages}} in your inbox.",
+        "winners":      "There {0, plural, one {is # winner} other {are # winners}}!",
+        "zero_only":    "{0, plural, =0 {nothing here} other {# things}}",
+        "cart":         "Cart: {0, plural, =0 {no items} one {# item} other {# items}} and {1, plural, =0 {no coupons} one {# coupon} other {# coupons}}.",
+        "reaction":     "{0, select, female {She} male {He} other {They}} liked your post.",
+        "search":       "Found {0, plural, =0 {no results} one {# result} other {# results}} for \\"{1}\\".",
+        "nested_var":   "{0, plural, one {# item costing {1}} other {# items costing {1} each}}",
+        "plain":        "No ICU blocks here, just {0}.",
+        "verb_agree":   "{0, plural, one {# file was} other {# files were}} changed."
+      }
+    }
+    ''';
+
+    setUp(() {
+      mockBundle = MockAssetBundle({'assets/translations/en.json': icuJson});
+      TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+          .setMockMessageHandler('flutter/assets', (message) async {
+        final key = utf8.decode(message!.buffer.asUint8List());
+        if (mockBundle!._mockAssets.containsKey(key)) {
+          return ByteData.view(
+            Uint8List.fromList(utf8.encode(mockBundle!._mockAssets[key]!)).buffer,
+          );
+        }
+        return null;
+      });
+    });
+
+    test('plural: selects "one" form', () async {
+      await signalTranslator!.loadLocale('en');
+      expect(tlv('inbox', '1'), 'You have 1 message in your inbox.');
+    });
+
+    test('plural: selects "other" form', () async {
+      await signalTranslator!.loadLocale('en');
+      expect(tlv('inbox', '5'), 'You have 5 messages in your inbox.');
+    });
+
+    test('plural: =0 exact match overrides "zero" category', () async {
+      await signalTranslator!.loadLocale('en');
+      // "zero_only" has =0 but no "zero" key; =0 should be preferred
+      expect(tlv('zero_only', '0'), 'nothing here');
+    });
+
+    test('plural: exact match =0 takes priority over named category', () async {
+      await signalTranslator!.loadLocale('en');
+      // "inbox" has =0 "no messages" — should NOT fall through to a "zero" key
+      expect(tlv('inbox', '0'), 'You have no messages in your inbox.');
+    });
+
+    test('plural: falls back to "other" when no exact or category match', () async {
+      await signalTranslator!.loadLocale('en');
+      // "winners" has no "zero" or "=0" key, so 0 falls back to "other"
+      expect(tlv('winners', '0'), 'There are 0 winners!');
+    });
+
+    test('plural: # token is replaced with the count', () async {
+      await signalTranslator!.loadLocale('en');
+      expect(tlv('winners', '3'), 'There are 3 winners!');
+      expect(tlv('winners', '1'), 'There is 1 winner!');
+    });
+
+    test('plural: verb agreement (is/are)', () async {
+      await signalTranslator!.loadLocale('en');
+      expect(tlv('verb_agree', '1'), '1 file was changed.');
+      expect(tlv('verb_agree', '2'), '2 files were changed.');
+    });
+
+    test('multiple ICU blocks in one string', () async {
+      await signalTranslator!.loadLocale('en');
+      expect(tlvm('cart', ['0', '0']), 'Cart: no items and no coupons.');
+      expect(tlvm('cart', ['1', '0']), 'Cart: 1 item and no coupons.');
+      expect(tlvm('cart', ['3', '1']), 'Cart: 3 items and 1 coupon.');
+      expect(tlvm('cart', ['2', '4']), 'Cart: 2 items and 4 coupons.');
+    });
+
+    test('select: matches the given form', () async {
+      await signalTranslator!.loadLocale('en');
+      expect(tlv('reaction', 'female'), 'She liked your post.');
+      expect(tlv('reaction', 'male'),   'He liked your post.');
+    });
+
+    test('select: falls back to "other" for unknown values', () async {
+      await signalTranslator!.loadLocale('en');
+      expect(tlv('reaction', 'nonbinary'), 'They liked your post.');
+      expect(tlv('reaction', 'other'),     'They liked your post.');
+    });
+
+    test('ICU plural combined with a regular {N} variable', () async {
+      await signalTranslator!.loadLocale('en');
+      expect(
+        tlvm('search', ['0', 'dart']),
+        'Found no results for "dart".',
+      );
+      expect(
+        tlvm('search', ['1', 'flutter']),
+        'Found 1 result for "flutter".',
+      );
+      expect(
+        tlvm('search', ['42', 'signals']),
+        'Found 42 results for "signals".',
+      );
+    });
+
+    test('{N} variable inside ICU form body is substituted', () async {
+      await signalTranslator!.loadLocale('en');
+      // {1} inside the form body should be filled by the normal substitution pass
+      expect(
+        tlvm('nested_var', ['1', '\$9.99']),
+        '1 item costing \$9.99',
+      );
+      expect(
+        tlvm('nested_var', ['3', '\$4.50']),
+        '3 items costing \$4.50 each',
+      );
+    });
+
+    test('non-ICU strings pass through the resolver unchanged', () async {
+      await signalTranslator!.loadLocale('en');
+      expect(tlv('plain', 'world'), 'No ICU blocks here, just world.');
+    });
+
+    test('missing variable index produces empty string for that block', () async {
+      await signalTranslator!.loadLocale('en');
+      // No variables passed — ICU block resolves to empty, rest of string stays
+      expect(tl('inbox'), 'You have  in your inbox.');
+    });
+
+    test('nonexistent key falls back to the key string', () async {
+      await signalTranslator!.loadLocale('en');
+      expect(tlv('nonexistent_icu_key', '5'), 'nonexistent_icu_key');
+    });
   });
 }
