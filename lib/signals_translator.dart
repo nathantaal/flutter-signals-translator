@@ -1,17 +1,25 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:ui' as ui;
+import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart' show rootBundle;
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:signals/signals.dart';
 
 class SignalTranslator {
   // Make the TranslationService a singleton
-  factory SignalTranslator() {
-    return _instance;
-  }
+  factory SignalTranslator() => _current;
 
-  static final SignalTranslator _instance = SignalTranslator._internal();
+  static SignalTranslator _current = SignalTranslator._internal();
+
+  /// Swaps the singleton for a fresh instance so tests start from a clean
+  /// slate without needing to reset fields by hand. Each new state field added
+  /// to [SignalTranslator] is reset automatically because a new instance is
+  /// constructed.
+  @visibleForTesting
+  static void debugReset() {
+    _current = SignalTranslator._internal();
+  }
 
   late final SharedPreferences prefs;
   final Completer<void> _sharedPreferencesCompleter = Completer<void>();
@@ -26,7 +34,11 @@ class SignalTranslator {
   );
 
   late final Computed<String> assetLocationString;
-  late final Computed<String> decodedJson;
+
+  /// Locale used to load translations when the resolved locale's asset is
+  /// missing or unparsable. Defaults to `'en'`. Set this before the first
+  /// [loadLocale] call (or bundle a matching asset) to customise it.
+  String fallbackLocale = 'en';
 
   String get currentLocale => _chosenLocale.value;
 
@@ -50,6 +62,7 @@ class SignalTranslator {
 
   Future<void> _saveLocaleToStorage(String locale) async {
     await _sharedPreferencesCompleter.future;
+    if (prefs.getString('locale') == locale) return;
     await prefs.setString('locale', locale);
   }
 
@@ -63,16 +76,41 @@ class SignalTranslator {
   }
 
   Future<void> loadLocale(String locale) async {
+    // Persist the user's intent (e.g. 'sys') before attempting to load assets,
+    // so the preference survives even when the resolved asset is missing.
     _chosenLocale.value = locale;
-    Map<String, dynamic> decodedJson = json.decode(
-      await rootBundle.loadString(assetLocationString.value, cache: false),
-    );
-    if (!decodedJson.containsKey('translations')) {
-      throw Exception('Translations key not found in the JSON file');
-    }
-    Map<String, dynamic> translationsJson = decodedJson['translations'];
-    _translations.value = translationsJson;
     await _saveLocaleToStorage(locale);
+
+    final primary = assetLocationString.value;
+    final fallback = 'assets/translations/$fallbackLocale.json';
+    final candidates =
+        primary == fallback ? <String>[primary] : <String>[primary, fallback];
+
+    for (final path in candidates) {
+      try {
+        await _loadTranslationsFromAsset(path);
+        return;
+      } on FlutterError catch (e) {
+        debugPrint('signals_translator: asset not found at $path ($e)');
+      } on FormatException catch (e) {
+        debugPrint('signals_translator: malformed translations at $path ($e)');
+      }
+    }
+    // Every candidate failed — degrade to key-as-value mode.
+    _clearTranslations();
+  }
+
+  Future<void> _loadTranslationsFromAsset(String assetPath) async {
+    final raw = await rootBundle.loadString(assetPath, cache: false);
+    final Map<String, dynamic> decodedJson = json.decode(raw);
+    if (!decodedJson.containsKey('translations')) {
+      throw const FormatException('Translations key not found in the JSON file');
+    }
+    _translations.value = decodedJson['translations'] as Map<String, dynamic>;
+  }
+
+  void _clearTranslations() {
+    _translations.value = {};
   }
 
   String _translate(String key, [List variables = const []]) {
@@ -95,11 +133,12 @@ class SignalTranslator {
     }
     if (value is Map) {
       // Build the plural form key, e.g. one_other, other_one, etc.
-      List<String> forms = counts.map((c) {
-        if (c == 0) return 'zero';
-        if (c == 1) return 'one';
-        return 'other';
-      }).toList();
+      List<String> forms =
+          counts.map((c) {
+            if (c == 0) return 'zero';
+            if (c == 1) return 'one';
+            return 'other';
+          }).toList();
       String formKey = forms.join('_');
       String? form = value[formKey];
       form ??= value.values.first.toString();
