@@ -22,19 +22,15 @@ jobs:
       - run: flutter analyze
       - run: flutter test
 
-      - name: Get pub.dev OIDC token
+      - name: Export pub.dev OIDC token
         uses: actions/github-script@v7
-        id: oidc
         with:
-          result-encoding: string
           script: |
             const token = await core.getIDToken('https://pub.dev');
             core.setSecret(token);
-            return token;
+            core.exportVariable('PUB_TOKEN', token);
 
       - name: Configure pub.dev credentials
-        env:
-          PUB_TOKEN: ${{ steps.oidc.outputs.result }}
         run: dart pub token add https://pub.dev --env-var PUB_TOKEN
 
       - run: dart pub publish --force
