@@ -12,7 +12,7 @@ dependencies:
   flutter:
     sdk: flutter
   shared_preferences: ^2.5.3
-  signals: ^6.0.0
+  signals: ">=6.0.0 <8.0.0"
 
 dev_dependencies:
   flutter_test:
