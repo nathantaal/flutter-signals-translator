@@ -165,8 +165,8 @@ SignalTranslator().loadLocale('en_GB');
 
 If `en_GB.json` is missing, the package falls back to `en.json`, then to your
 configured `fallbackLocale` (and then to its bare language if regional). This
-means you can introduce regional files incrementally — drop in `en_GB.json`
-whenever you have one, and existing `en` callers keep working unchanged.
+means you can introduce regional files incrementally. Then you can use this otherwise in your application, for example 
+when formatting dates per region, while still using the generic `en` translations for text.
 
 Input is case- and separator-tolerant: `'en_GB'`, `'en-gb'`, and `'EN_gB'`
 all resolve to the same canonical form. Non-canonical input logs a one-line
