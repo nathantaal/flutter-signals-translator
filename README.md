@@ -44,7 +44,7 @@ Licensed under a MIT License.
 3. Add the following to your `pubspec.yaml` file:
 ```yaml
 dependencies:
-  signals_translator: ^0.0.3
+  signals_translator: ^0.0.6
 
   [...]
 
@@ -77,6 +77,11 @@ SignalTranslator().loadLocale('en');
 SignalTranslator().currentLocale;
 ```
 This is done automatically when the app starts, but if you want to build in a language selector, you can use this method to highlight the currently selected language.
+
+If you need a concrete locale string for APIs like `intl`'s `DateFormat` — which don't understand the `'sys'` sentinel — use `resolvedLocale` instead. It returns `currentLocale` for explicit choices and the device locale when `'sys'` is selected:
+```dart
+SignalTranslator().resolvedLocale;
+```
 
 ## Examples
 
@@ -279,6 +284,43 @@ Text(tlvm('order_line', ['3', '\$4.50'])); // 3 items costing $4.50 each
 | Format lives in | JSON structure | Translation string |
 
 ---
+
+## Regional locales
+
+You can ship region-specific translation files alongside the generic ones.
+Files use the canonical name `<lang>_<REGION>.json`:
+
+```
+assets/translations/
+  en.json
+  en_GB.json
+  en_US.json
+  nl.json
+```
+
+Then call `loadLocale` with the regional code:
+
+```dart
+SignalTranslator().loadLocale('en_GB');
+```
+
+If `en_GB.json` is missing, the package falls back to `en.json`, then to your
+configured `fallbackLocale` (and then to its bare language if regional). This
+means you can introduce regional files incrementally. Then you can use this otherwise in your application, for example 
+when formatting dates per region, while still using the generic `en` translations for text.
+
+Input is case- and separator-tolerant: `'en_GB'`, `'en-gb'`, and `'EN_gB'`
+all resolve to the same canonical form. Non-canonical input logs a one-line
+`debugPrint` warning so typos are visible in debug builds.
+
+Wiring from `MaterialApp`'s `Locale` is a one-liner:
+
+```dart
+final code = l.countryCode == null
+    ? l.languageCode
+    : '${l.languageCode}_${l.countryCode}';
+SignalTranslator().loadLocale(code);
+```
 
 ## Development
 Publish extension using `dart pub publish --dry-run`

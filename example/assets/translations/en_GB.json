@@ -1,0 +1,28 @@
+{
+  "language": "English (UK)",
+  "translations": {
+    "Dutch": "Dutch",
+    "English": "English (UK)",
+    "Spanish": "Spanish",
+    "{0} has won the game!": "{0} has won the match!",
+    "{0} has won the game": "{0} has won the match",
+    "He came in {0}, while his partner came in at the {1} place": "He came in {0}, whilst his partner came in at the {1} place",
+    "CAN_USE_KEY": "You may also use key-value pairs to translate",
+    "Signal Translator Example": "Signal Translator Example (UK)",
+    "Current locale: {0}": "Current locale: {0}",
+    "My favorite color is blue.": "My favourite colour is blue.",
+    "I took the elevator to the 5th floor.": "I took the lift to the 5th floor.",
+    "I have {0} apples": {
+      "zero": "I have no apples",
+      "one": "I have 1 apple",
+      "other": "I have {0} apples"
+    },
+    "I have {0} strawberries and {1} bananas": {
+      "zero_zero": "I have no strawberries and no bananas",
+      "one_one": "I have 1 strawberry and 1 banana",
+      "one_other": "I have 1 strawberry and {1} bananas",
+      "other_one": "I have {0} strawberries and 1 banana",
+      "other_other": "I have {0} strawberries and {1} bananas"
+    }
+  }
+}

@@ -1,0 +1,16 @@
+# Normalize all text files to LF in the repo
+* text=auto eol=lf
+
+# Force specific files to LF
+*.sh text eol=lf
+
+# Force specific files to CRLF (e.g. Windows batch scripts)
+*.bat text eol=crlf
+
+# Treat as binary (no conversion)
+*.png binary
+
+# Still git line ending / no content changes? Run:
+#  git rm --cached -r .
+#  git reset HEAD
+#  git add .
