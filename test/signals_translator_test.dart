@@ -132,6 +132,18 @@ void main() {
       },
     );
 
+    test(
+      "defaults currentLocale to the 'sys' sentinel until something is chosen",
+      () {
+        // 0.0.6 defaulted to composeDeviceLocale() (e.g. 'en_US'), which
+        // silently broke any caller binding a dropdown to currentLocale
+        // against bare-language items. Default to 'sys' so regional asset
+        // auto-pickup still resolves via _deviceLocale without forcing
+        // consumers to strip region suffixes for their UI.
+        expect(signalTranslator!.currentLocale, 'sys');
+      },
+    );
+
     test('changes language and serves the selected translation set', () async {
       // For the NL variant, the developer choose to not translate the
       // languages, so the user can find their language easily.

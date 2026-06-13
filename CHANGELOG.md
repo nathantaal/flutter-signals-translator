@@ -1,3 +1,22 @@
+## 0.0.7
+
+Hotfix for 0.0.6: `currentLocale` now defaults to the `'sys'` sentinel
+instead of the device's regional locale string. The 0.0.6 default
+(`composeDeviceLocale()`, e.g. `'en_US'`) silently broke any caller
+binding a dropdown's `value:` to `currentLocale` against bare-language
+items — `'en_US'` doesn't match `'en'`, so the dropdown asserted and
+the page failed to render.
+
+* `_chosenLocale` initialises to `'sys'` until a concrete locale is
+  chosen via `loadLocale` or rehydrated from storage. Regional asset
+  auto-pickup still works through the `'sys'` path (`resolvedLocale`
+  returns the regional code from `_deviceLocale`).
+* Stored locale preferences from earlier versions continue to load
+  unchanged.
+* Apps that want the previous "pick the device's regional locale at
+  startup" behaviour can call `await loadLocale('sys')` (or any
+  explicit locale) during initialisation.
+
 ## 0.0.1
 ## 0.0.1+1
 ## 0.0.1+2

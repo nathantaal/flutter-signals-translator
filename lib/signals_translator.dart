@@ -32,7 +32,14 @@ class SignalTranslator with WidgetsBindingObserver {
 
   final Signal<Map<String, dynamic>> _translations = Signal({});
 
-  final Signal<String> _chosenLocale = Signal(composeDeviceLocale());
+  // Until the consumer (or stored prefs) picks a concrete locale, follow the
+  // system. In 0.0.6 this defaulted to `composeDeviceLocale()`, which broke
+  // any caller binding a dropdown to `currentLocale` against bare-language
+  // items — `'en_US'` doesn't match `'en'`. Defaulting to the `'sys'`
+  // sentinel keeps the regional auto-pickup (it still resolves through
+  // `_deviceLocale`) without forcing every consumer to strip regions before
+  // displaying the choice.
+  final Signal<String> _chosenLocale = Signal('sys');
   final Signal<String> _deviceLocale = Signal(composeDeviceLocale());
   final Signal<String?> _activeLocale = Signal(null);
 
