@@ -940,4 +940,127 @@ void main() {
       },
     );
   });
+
+  group('ICU message format', () {
+    const icuJson = '''
+    {
+      "language": "English",
+      "translations": {
+        "inbox":      "You have {0, plural, =0 {no messages} one {# message} other {# messages}} in your inbox.",
+        "winners":    "There {0, plural, one {is # winner} other {are # winners}}!",
+        "zero_only":  "{0, plural, =0 {nothing here} other {# things}}",
+        "cart":       "Cart: {0, plural, =0 {no items} one {# item} other {# items}} and {1, plural, =0 {no coupons} one {# coupon} other {# coupons}}.",
+        "reaction":   "{0, select, female {She} male {He} other {They}} liked your post.",
+        "search":     "Found {0, plural, =0 {no results} one {# result} other {# results}} for \\"{1}\\".",
+        "nested_var": "{0, plural, one {# item costing {1}} other {# items costing {1} each}}",
+        "plain":      "No ICU blocks here, just {0}.",
+        "verb_agree": "{0, plural, one {# file was} other {# files were}} changed."
+      }
+    }
+    ''';
+
+    setUp(() {
+      useAssets({'assets/translations/en.json': icuJson});
+    });
+
+    test('plural: selects "one" form', () async {
+      await signalTranslator!.loadLocale('en');
+      expect(tlv('inbox', '1'), 'You have 1 message in your inbox.');
+    });
+
+    test('plural: selects "other" form', () async {
+      await signalTranslator!.loadLocale('en');
+      expect(tlv('inbox', '5'), 'You have 5 messages in your inbox.');
+    });
+
+    test('plural: =0 exact match resolves when "zero" key absent', () async {
+      await signalTranslator!.loadLocale('en');
+      expect(tlv('zero_only', '0'), 'nothing here');
+    });
+
+    test('plural: exact match =0 takes priority over category', () async {
+      await signalTranslator!.loadLocale('en');
+      expect(tlv('inbox', '0'), 'You have no messages in your inbox.');
+    });
+
+    test(
+      'plural: falls back to "other" when no exact or category match',
+      () async {
+        await signalTranslator!.loadLocale('en');
+        expect(tlv('winners', '0'), 'There are 0 winners!');
+      },
+    );
+
+    test('plural: # token is replaced with the count', () async {
+      await signalTranslator!.loadLocale('en');
+      expect(tlv('winners', '3'), 'There are 3 winners!');
+      expect(tlv('winners', '1'), 'There is 1 winner!');
+    });
+
+    test('plural: verb agreement (is/are)', () async {
+      await signalTranslator!.loadLocale('en');
+      expect(tlv('verb_agree', '1'), '1 file was changed.');
+      expect(tlv('verb_agree', '2'), '2 files were changed.');
+    });
+
+    test('multiple ICU blocks in one string', () async {
+      await signalTranslator!.loadLocale('en');
+      expect(tlvm('cart', ['0', '0']), 'Cart: no items and no coupons.');
+      expect(tlvm('cart', ['1', '0']), 'Cart: 1 item and no coupons.');
+      expect(tlvm('cart', ['3', '1']), 'Cart: 3 items and 1 coupon.');
+      expect(tlvm('cart', ['2', '4']), 'Cart: 2 items and 4 coupons.');
+    });
+
+    test('select: matches the given form', () async {
+      await signalTranslator!.loadLocale('en');
+      expect(tlv('reaction', 'female'), 'She liked your post.');
+      expect(tlv('reaction', 'male'), 'He liked your post.');
+    });
+
+    test('select: falls back to "other" for unknown values', () async {
+      await signalTranslator!.loadLocale('en');
+      expect(tlv('reaction', 'nonbinary'), 'They liked your post.');
+      expect(tlv('reaction', 'other'), 'They liked your post.');
+    });
+
+    test('ICU plural combined with a regular {N} variable', () async {
+      await signalTranslator!.loadLocale('en');
+      expect(tlvm('search', ['0', 'dart']), 'Found no results for "dart".');
+      expect(
+        tlvm('search', ['1', 'flutter']),
+        'Found 1 result for "flutter".',
+      );
+      expect(
+        tlvm('search', ['42', 'signals']),
+        'Found 42 results for "signals".',
+      );
+    });
+
+    test('{N} variable inside ICU form body is substituted', () async {
+      await signalTranslator!.loadLocale('en');
+      expect(tlvm('nested_var', ['1', '\$9.99']), '1 item costing \$9.99');
+      expect(
+        tlvm('nested_var', ['3', '\$4.50']),
+        '3 items costing \$4.50 each',
+      );
+    });
+
+    test('non-ICU strings pass through the resolver unchanged', () async {
+      await signalTranslator!.loadLocale('en');
+      expect(tlv('plain', 'world'), 'No ICU blocks here, just world.');
+    });
+
+    test(
+      'missing variable index produces empty string for that block',
+      () async {
+        await signalTranslator!.loadLocale('en');
+        expect(tl('inbox'), 'You have  in your inbox.');
+      },
+    );
+
+    test('nonexistent ICU key falls back to the key string', () async {
+      await signalTranslator!.loadLocale('en');
+      expect(tlv('nonexistent_icu_key', '5'), 'nonexistent_icu_key');
+    });
+  });
 }

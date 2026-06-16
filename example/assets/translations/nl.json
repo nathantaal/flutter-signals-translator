@@ -23,6 +23,12 @@
       "one_other": "Ik heb 1 aardbei en {1} bananen",
       "other_one": "Ik heb {0} aardbeien en 1 banaan",
       "other_other": "Ik heb {0} aardbeien en {1} bananen"
-    }
+    },
+    "ICU Examples": "ICU-voorbeelden",
+    "inbox_count": "Je hebt {0, plural, =0 {geen berichten} one {# bericht} other {# berichten}} in je inbox.",
+    "winner_announcement": "Er {0, plural, one {is # winnaar} other {zijn # winnaars}}!",
+    "cart_summary": "Je winkelwagen heeft {0, plural, =0 {geen artikelen} one {# artikel} other {# artikelen}} en {1, plural, =0 {geen kortingsbonnen} one {# kortingsbon} other {# kortingsbonnen}} toegepast.",
+    "reaction": "{0, select, female {Ze} male {Hij} other {Ze}} vond je bericht leuk.",
+    "search_results": "{0, plural, =0 {Geen resultaten} one {# resultaat} other {# resultaten}} gevonden voor \"{1}\"."
   }
 }
