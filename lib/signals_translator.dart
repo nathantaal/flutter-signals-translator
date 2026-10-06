@@ -28,7 +28,9 @@ class SignalTranslator with WidgetsBindingObserver {
   }
 
   late final SharedPreferences prefs;
-  final Completer<void> _sharedPreferencesCompleter = Completer<void>();
+  // Resolves to null when SharedPreferences failed to load.
+  final Completer<SharedPreferences?> _prefsCompleter = Completer();
+  late final Future<void> _ready;
 
   final Signal<Map<String, dynamic>> _translations = Signal({});
 
@@ -67,6 +69,15 @@ class SignalTranslator with WidgetsBindingObserver {
 
   String get currentLocale => _chosenLocale.value;
 
+  /// Completes once SharedPreferences has loaded and the stored locale, if
+  /// any, has been applied — so its translations are available.
+  ///
+  /// Completes with an error when SharedPreferences can't be loaded.
+  /// Translation keeps working in that case; locale choices just aren't
+  /// persisted. With no stored locale nothing is loaded at startup; call
+  /// [loadLocale] (e.g. with `'sys'`) to load one.
+  Future<void> get ready => _ready;
+
   /// Returns the current locale reported by the operating system.
   ///
   /// This value updates when the platform locale changes.
@@ -102,16 +113,26 @@ class SignalTranslator with WidgetsBindingObserver {
   /// use [tl] / [tlv] / [tlp] etc. instead.
   Map<String, dynamic> get internalTranslations => _translations.value;
 
-  Future<void> _initializePrefs() async {
-    prefs = await SharedPreferences.getInstance();
-    _sharedPreferencesCompleter.complete();
+  Future<void> _initialize() async {
+    try {
+      prefs = await SharedPreferences.getInstance();
+    } catch (e) {
+      _prefsCompleter.complete(null);
+      debugPrint(
+        'signals_translator: SharedPreferences unavailable; locale choices will not persist ($e)',
+      );
+      rethrow;
+    }
+    _prefsCompleter.complete(prefs);
+    await _loadLocaleFromStorage();
   }
 
   // Singleton constructor
   SignalTranslator._internal() {
     _ensureObserverAttached();
-    _initializePrefs();
-    _loadLocaleFromStorage();
+    // The error stays observable through [ready]; ignore() only stops it from
+    // being reported as unhandled when nobody awaits it.
+    _ready = _initialize()..ignore();
 
     assetLocationString = computed(
       () =>
@@ -165,13 +186,12 @@ class SignalTranslator with WidgetsBindingObserver {
   }
 
   Future<void> _saveLocaleToStorage(String locale) async {
-    await _sharedPreferencesCompleter.future;
-    if (prefs.getString('locale') == locale) return;
-    await prefs.setString('locale', locale);
+    final storage = await _prefsCompleter.future;
+    if (storage == null || storage.getString('locale') == locale) return;
+    await storage.setString('locale', locale);
   }
 
   Future<void> _loadLocaleFromStorage() async {
-    await _sharedPreferencesCompleter.future;
     final locale = prefs.getString('locale');
     if (locale != null) {
       // Skip the non-canonical warning for values already in storage — the

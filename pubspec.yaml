@@ -1,6 +1,6 @@
 name: signals_translator
 description: "Translate your project 100% using signals"
-version: 0.0.7
+version: 0.1.0
 homepage: https://github.com/nathantaal/flutter-signals-translator
 repository: https://github.com/nathantaal/flutter-signals-translator
 
@@ -11,6 +11,7 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
+  intl: ">=0.19.0 <0.21.0"
   shared_preferences: ^2.5.3
   signals: ">=6.0.0 <8.0.0"
 
@@ -18,4 +19,4 @@ dev_dependencies:
   flutter_test:
     sdk: flutter
   flutter_lints: ^6.0.0
-  mockito: ^5.4.0
+  shared_preferences_platform_interface: ^2.4.1
