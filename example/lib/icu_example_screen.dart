@@ -167,6 +167,189 @@ class _IcuExampleScreenState extends State<IcuExampleScreen> {
                 ],
               ),
             ),
+            const SizedBox(height: 24),
+
+            Text(
+              'Known issues',
+              style: Theme.of(context).textTheme.titleLarge,
+            ),
+            const SizedBox(height: 4),
+            Text(
+              'Each card compares the expected output with what the resolver '
+              'returns today. Switch to English (UK) to see the ICU keys '
+              'missing from en_GB.json. Locale-specific plural rules '
+              '(fr/pl/ru/ar) and the ready future are covered by unit tests '
+              'only.',
+              style: Theme.of(context).textTheme.bodySmall,
+            ),
+            const SizedBox(height: 12),
+            for (final issue in _knownIssues()) ...[
+              _KnownIssueCard(issue: issue),
+              const SizedBox(height: 12),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+
+  List<_KnownIssue> _knownIssues() => [
+    _icuIssue(
+      'Nested plural: # uses the outer count',
+      '{0, plural, one {One basket with {1, plural, one {# apple} other {# apples}}} '
+          'other {# baskets with {1, plural, one {# apple} other {# apples}}}}',
+      ['1', '3'],
+      'One basket with 3 apples',
+    ),
+    _icuIssue(
+      'Non-integer count picks the =0 form',
+      'You have {0, plural, =0 {no messages} one {# message} other {# messages}} in your inbox.',
+      ['1.5'],
+      'You have 1.5 messages in your inbox.',
+    ),
+    _icuIssue(
+      'English has no "zero" plural category',
+      '{0, plural, zero {zero form} one {# item} other {# items}}',
+      ['0'],
+      '0 items',
+    ),
+    _icuIssue(
+      'Truncated block throws',
+      'abc {0, plural,',
+      ['1'],
+      'abc {0, plural,',
+    ),
+    _icuIssue(
+      'Unclosed block swallows the rest of the string',
+      'x {0, plural, one {a} other {b}',
+      ['1'],
+      'x {0, plural, one {a} other {b}',
+    ),
+    _icuIssue(
+      "Quoted '#' is not kept literal",
+      "{0, plural, one {# issue, see ticket '#'{1}} other {# issues, see ticket '#'{1}}}",
+      ['1', '42'],
+      '1 issue, see ticket #42',
+    ),
+    _icuIssue(
+      'Repeated placeholder is substituted only once',
+      '{0} likes {1, select, female {her} other {their}} cat, says {0}.',
+      ['Ann', 'female'],
+      'Ann likes her cat, says Ann.',
+    ),
+    _icuIssue(
+      'Substituted value is re-scanned for placeholders',
+      '{0} and {1}',
+      ['{1}', 'b'],
+      '{1} and b',
+    ),
+    _icuIssue(
+      'Whitespace after "{" is not recognised',
+      '{ 0, plural, one {# item} other {# items}}',
+      ['2'],
+      '2 items',
+    ),
+    _icuIssue(
+      'selectordinal is not supported',
+      '{0, selectordinal, one {#st} two {#nd} few {#rd} other {#th}}',
+      ['22'],
+      '22nd',
+    ),
+    _icuIssue(
+      'plural offset renders an empty string',
+      '{0, plural, offset:1 =0 {nobody} =1 {only {1}} one {{1} and # other} other {{1} and # others}}',
+      ['2', 'Ann'],
+      'Ann and 1 other',
+    ),
+    _KnownIssue(
+      title: 'tlv on a key still in the nested-map (tlp) format',
+      template: 'I have {0} apples',
+      values: const ['0'],
+      // ignore: deprecated_member_use
+      expected: tlp('I have {0} apples', 0) ?? '',
+      actual: _attempt(() => tlv('I have {0} apples', '0')),
+    ),
+  ];
+
+  _KnownIssue _icuIssue(
+    String title,
+    String template,
+    List<String> values,
+    String expected,
+  ) => _KnownIssue(
+    title: title,
+    template: template,
+    values: values,
+    expected: expected,
+    actual: _attempt(() => tlvm(template, values)),
+  );
+}
+
+String _attempt(String Function() translate) {
+  try {
+    return translate();
+  } catch (e) {
+    return 'throws ${e.runtimeType}';
+  }
+}
+
+class _KnownIssue {
+  const _KnownIssue({
+    required this.title,
+    required this.template,
+    required this.values,
+    required this.expected,
+    required this.actual,
+  });
+
+  final String title;
+  final String template;
+  final List<String> values;
+  final String expected;
+  final String actual;
+}
+
+class _KnownIssueCard extends StatelessWidget {
+  const _KnownIssueCard({required this.issue});
+
+  final _KnownIssue issue;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final passes = issue.actual == issue.expected;
+    final statusColor = passes ? Colors.green : theme.colorScheme.error;
+    const mono = TextStyle(fontFamily: 'monospace', fontSize: 12);
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(
+                  passes ? Icons.check_circle : Icons.cancel,
+                  color: statusColor,
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(issue.title, style: theme.textTheme.titleMedium),
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            Text('Template: ${issue.template}', style: mono),
+            Text(
+              'Values: ${issue.values.map((v) => "'$v'").join(', ')}',
+              style: mono,
+            ),
+            const Divider(height: 20),
+            Text('Expected: ${issue.expected}'),
+            Text(
+              'Actual: ${issue.actual}',
+              style: TextStyle(color: statusColor, fontWeight: FontWeight.bold),
+            ),
           ],
         ),
       ),
@@ -177,19 +360,19 @@ class _IcuExampleScreenState extends State<IcuExampleScreen> {
 class _LangSwitcher extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
-    return Row(
+    return Wrap(
+      spacing: 8,
+      runSpacing: 8,
       children: [
         for (final (label, code) in [
           ('English', 'en'),
+          ('English (UK)', 'en_GB'),
           ('Dutch', 'nl'),
           ('Spanish', 'es'),
         ])
-          Padding(
-            padding: const EdgeInsets.only(right: 8),
-            child: ElevatedButton(
-              onPressed: () => SignalTranslator().loadLocale(code),
-              child: Text(label),
-            ),
+          ElevatedButton(
+            onPressed: () => SignalTranslator().loadLocale(code),
+            child: Text(label),
           ),
       ],
     );

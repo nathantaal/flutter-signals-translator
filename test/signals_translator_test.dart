@@ -4,7 +4,16 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:shared_preferences_platform_interface/shared_preferences_platform_interface.dart';
 import 'package:signals_translator/signals_translator.dart';
+
+class _FailingPreferencesStore extends InMemorySharedPreferencesStore {
+  _FailingPreferencesStore() : super.empty();
+
+  @override
+  Future<Map<String, Object>> getAll() =>
+      Future.error(PlatformException(code: 'prefs-unavailable'));
+}
 
 class MockAssetBundle extends CachingAssetBundle {
   final Map<String, String> _mockAssets;
@@ -1061,6 +1070,243 @@ void main() {
     test('nonexistent ICU key falls back to the key string', () async {
       await signalTranslator!.loadLocale('en');
       expect(tlv('nonexistent_icu_key', '5'), 'nonexistent_icu_key');
+    });
+  });
+
+  group('ICU edge cases', () {
+    const edgeJson = r'''
+    {
+      "language": "English",
+      "translations": {
+        "inbox":              "You have {0, plural, =0 {no messages} one {# message} other {# messages}} in your inbox.",
+        "nested_plural":      "{0, plural, one {One basket with {1, plural, one {# apple} other {# apples}}} other {# baskets with {1, plural, one {# apple} other {# apples}}}}",
+        "truncated":          "abc {0, plural,",
+        "huge_index":         "{99999999999999999999, plural, one {a} other {b}}",
+        "unclosed":           "x {0, plural, one {a} other {b}",
+        "literal_hash":       "{0, plural, one {# issue, see ticket '#'{1}} other {# issues, see ticket '#'{1}}}",
+        "repeated_var":       "{0} likes {1, select, female {her} other {their}} cat, says {0}.",
+        "pair":               "{0} and {1}",
+        "space_after_brace":  "{ 0, plural, one {# item} other {# items}}",
+        "space_before_comma": "{0 , plural, one {# item} other {# items}}",
+        "ordinal":            "{0, selectordinal, one {#st} two {#nd} few {#rd} other {#th}}",
+        "offset":             "{0, plural, offset:1 =0 {nobody} =1 {only {1}} one {{1} and # other} other {{1} and # others}}"
+      }
+    }
+    ''';
+
+    setUp(() {
+      useAssets({'assets/translations/en.json': edgeJson});
+    });
+
+    test('nested plural: # binds to the innermost plural count', () async {
+      await signalTranslator!.loadLocale('en');
+      expect(tlvm('nested_plural', ['1', '3']), 'One basket with 3 apples');
+      expect(tlvm('nested_plural', ['2', '1']), '2 baskets with 1 apple');
+    });
+
+    test('plural: a non-integer value selects the "other" form', () async {
+      await signalTranslator!.loadLocale('en');
+      expect(tlv('inbox', '1.5'), 'You have 1.5 messages in your inbox.');
+      expect(tlv('inbox', '1,000'), 'You have 1,000 messages in your inbox.');
+    });
+
+    test('malformed: a truncated block does not throw', () async {
+      await signalTranslator!.loadLocale('en');
+      expect(() => tlv('truncated', '1'), returnsNormally);
+    });
+
+    test('malformed: an oversized variable index does not throw', () async {
+      await signalTranslator!.loadLocale('en');
+      expect(() => tlv('huge_index', '1'), returnsNormally);
+    });
+
+    test(
+      'malformed: an unclosed block is rendered verbatim instead of '
+      'swallowing the rest of the string',
+      () async {
+        await signalTranslator!.loadLocale('en');
+        expect(tlv('unclosed', '1'), 'x {0, plural, one {a} other {b}');
+      },
+    );
+
+    test("plural: a quoted '#' stays a literal #", () async {
+      await signalTranslator!.loadLocale('en');
+      expect(tlvm('literal_hash', ['1', '42']), '1 issue, see ticket #42');
+    });
+
+    test('a placeholder used twice is substituted at every occurrence', () async {
+      await signalTranslator!.loadLocale('en');
+      expect(
+        tlvm('repeated_var', ['Ann', 'female']),
+        'Ann likes her cat, says Ann.',
+      );
+    });
+
+    test('substituted values are not re-scanned for placeholders', () async {
+      await signalTranslator!.loadLocale('en');
+      expect(tlvm('pair', ['{1}', 'b']), '{1} and b');
+    });
+
+    test('whitespace around the variable index is accepted', () async {
+      await signalTranslator!.loadLocale('en');
+      expect(tlv('space_after_brace', '2'), '2 items');
+      expect(tlv('space_before_comma', '2'), '2 items');
+    });
+
+    test('selectordinal picks English ordinal suffixes', () async {
+      await signalTranslator!.loadLocale('en');
+      const want = {
+        '1': '1st',
+        '2': '2nd',
+        '3': '3rd',
+        '4': '4th',
+        '11': '11th',
+        '12': '12th',
+        '13': '13th',
+        '21': '21st',
+        '22': '22nd',
+        '23': '23rd',
+        '101': '101st',
+        '111': '111th',
+      };
+      for (final MapEntry(:key, :value) in want.entries) {
+        expect(tlv('ordinal', key), value, reason: 'count $key');
+      }
+    });
+
+    test(
+      'plural offset: exact matches use the raw value; # and the category '
+      'use the value minus the offset',
+      () async {
+        await signalTranslator!.loadLocale('en');
+        expect(tlvm('offset', ['0', 'Ann']), 'nobody');
+        expect(tlvm('offset', ['1', 'Ann']), 'only Ann');
+        expect(tlvm('offset', ['2', 'Ann']), 'Ann and 1 other');
+        expect(tlvm('offset', ['3', 'Ann']), 'Ann and 2 others');
+      },
+    );
+
+    test('a missing variable logs a debug warning naming the key', () async {
+      await signalTranslator!.loadLocale('en');
+      final captured = <String>[];
+      final original = debugPrint;
+      debugPrint = (String? message, {int? wrapWidth}) {
+        if (message != null) captured.add(message);
+      };
+      try {
+        tl('inbox');
+      } finally {
+        debugPrint = original;
+      }
+
+      expect(
+        captured.any((m) => m.contains('inbox')),
+        isTrue,
+        reason: 'expected a debugPrint naming the key, got: $captured',
+      );
+    });
+  });
+
+  group('ICU plural categories follow CLDR rules for the active locale', () {
+    // Each form echoes its category name, so the assertion shows which
+    // category the resolver picked.
+    const probe =
+        '{0, plural, zero {zero:#} one {one:#} two {two:#} few {few:#} '
+        'many {many:#} other {other:#}}';
+
+    Future<void> loadProbe(String locale) async {
+      useAssets({
+        'assets/translations/$locale.json': jsonEncode({
+          'language': locale,
+          'translations': {'probe': probe},
+        }),
+      });
+      await signalTranslator!.loadLocale(locale);
+    }
+
+    test('English: 0 selects "other" (English has no "zero" category)', () async {
+      await loadProbe('en');
+      expect(tlv('probe', '0'), 'other:0');
+      expect(tlv('probe', '1'), 'one:1');
+    });
+
+    test('French: 0 selects "one"', () async {
+      await loadProbe('fr');
+      expect(tlv('probe', '0'), 'one:0');
+      expect(tlv('probe', '2'), 'other:2');
+    });
+
+    test('Polish: selects "few" and "many"', () async {
+      await loadProbe('pl');
+      expect(tlv('probe', '1'), 'one:1');
+      expect(tlv('probe', '3'), 'few:3');
+      expect(tlv('probe', '5'), 'many:5');
+      expect(tlv('probe', '12'), 'many:12');
+      expect(tlv('probe', '22'), 'few:22');
+    });
+
+    test('Russian: 21 selects "one" and 11 selects "many"', () async {
+      await loadProbe('ru');
+      expect(tlv('probe', '21'), 'one:21');
+      expect(tlv('probe', '11'), 'many:11');
+      expect(tlv('probe', '3'), 'few:3');
+    });
+
+    test('Arabic: selects "two", "few" and "many"', () async {
+      await loadProbe('ar');
+      expect(tlv('probe', '0'), 'zero:0');
+      expect(tlv('probe', '2'), 'two:2');
+      expect(tlv('probe', '3'), 'few:3');
+      expect(tlv('probe', '11'), 'many:11');
+      expect(tlv('probe', '100'), 'other:100');
+    });
+  });
+
+  group('tlp to tlv migration', () {
+    test(
+      'tlv selects the plural form from a locale that still uses the '
+      'nested-map format',
+      () async {
+        useAssets({
+          'assets/translations/en.json': '''
+            {
+              "language": "English",
+              "translations": {
+                "apples": {"zero": "No apples", "one": "One apple", "other": "{0} apples"}
+              }
+            }
+          ''',
+        });
+        await signalTranslator!.loadLocale('en');
+
+        expect(tlv('apples', '0'), 'No apples');
+        expect(tlv('apples', '1'), 'One apple');
+        expect(tlv('apples', '5'), '5 apples');
+      },
+    );
+  });
+
+  group('ready', () {
+    test('completes with an error when SharedPreferences fails to load', () async {
+      SharedPreferencesStorePlatform.instance = _FailingPreferencesStore();
+      SharedPreferences.resetStatic();
+      addTearDown(() => SharedPreferences.setMockInitialValues({}));
+
+      SignalTranslator.debugReset();
+
+      await expectLater(
+        SignalTranslator().ready.timeout(const Duration(seconds: 1)),
+        throwsA(isNot(isA<TimeoutException>())),
+      );
+    });
+
+    test('completes only after the stored locale has been loaded', () async {
+      SharedPreferences.setMockInitialValues({'locale': 'nl'});
+      SignalTranslator.debugReset();
+
+      await SignalTranslator().ready;
+
+      expect(tl('Dutch'), 'Nederlands');
     });
   });
 }
