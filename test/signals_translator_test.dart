@@ -1089,7 +1089,9 @@ void main() {
         "space_after_brace":  "{ 0, plural, one {# item} other {# items}}",
         "space_before_comma": "{0 , plural, one {# item} other {# items}}",
         "ordinal":            "{0, selectordinal, one {#st} two {#nd} few {#rd} other {#th}}",
-        "offset":             "{0, plural, offset:1 =0 {nobody} =1 {only {1}} one {{1} and # other} other {{1} and # others}}"
+        "offset":             "{0, plural, offset:1 =0 {nobody} =1 {only {1}} one {{1} and # other} other {{1} and # others}}",
+        "braces_in_form":     "{0, plural, one {Hi {name}!} other {Hey {name}!}} tail",
+        "number_in_form":     "{0, plural, one {# item at {1, number}} other {# items at {1, number}}}"
       }
     }
     ''';
@@ -1109,6 +1111,32 @@ void main() {
       expect(tlv('inbox', '1.5'), 'You have 1.5 messages in your inbox.');
       expect(tlv('inbox', '1,000'), 'You have 1,000 messages in your inbox.');
     });
+
+    test('plural: a non-finite value selects the "other" form', () async {
+      await signalTranslator!.loadLocale('en');
+      expect(tlv('inbox', 'NaN'), 'You have NaN messages in your inbox.');
+      expect(
+        tlv('inbox', 'Infinity'),
+        'You have Infinity messages in your inbox.',
+      );
+      expect(tlv('ordinal', '1e400'), '1e400th');
+    });
+
+    test('literal braces inside a form are kept verbatim', () async {
+      await signalTranslator!.loadLocale('en');
+      expect(tlv('braces_in_form', '1'), 'Hi {name}! tail');
+    });
+
+    test(
+      'an unsupported argument type inside a form is kept verbatim',
+      () async {
+        await signalTranslator!.loadLocale('en');
+        expect(
+          tlvm('number_in_form', ['2', '3.5']),
+          '2 items at {1, number}',
+        );
+      },
+    );
 
     test('malformed: a truncated block does not throw', () async {
       await signalTranslator!.loadLocale('en');

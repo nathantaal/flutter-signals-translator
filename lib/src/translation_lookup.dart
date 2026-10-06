@@ -52,9 +52,11 @@ class _MessageFormat {
         } on _Malformed catch (e) {
           _warn("malformed ICU argument in '$_key' at offset $start: ${e.reason}");
         }
-        // Not an argument: keep the brace and re-read what follows as text.
-        _pos = start + 1;
-        out.write('{');
+        // Not an argument: keep a balanced group as literal text so its `}`
+        // can't close an enclosing form; an unbalanced `{` is kept alone.
+        final end = _matchingBrace(start);
+        _pos = end == -1 ? start + 1 : end + 1;
+        out.write(_src.substring(start, _pos));
       } else if (hash != null && char == '#') {
         out.write(hash);
         _pos++;
@@ -113,7 +115,8 @@ class _MessageFormat {
           (throw const _Malformed('expected a number after "offset:"'));
     }
 
-    final number = value is num ? value : num.tryParse('$value');
+    final parsed = value is num ? value : num.tryParse('$value');
+    final number = parsed != null && parsed.isFinite ? parsed : null;
     final adjusted = number == null ? null : number - offset;
     final hash = switch (value) {
       null => '',
@@ -194,6 +197,19 @@ class _MessageFormat {
     if (n % 10 == 2 && n % 100 != 12) return 'two';
     if (n % 10 == 3 && n % 100 != 13) return 'few';
     return 'other';
+  }
+
+  int _matchingBrace(int open) {
+    var depth = 0;
+    for (var i = open; i < _src.length; i++) {
+      final char = _src[i];
+      if (char == '{') {
+        depth++;
+      } else if (char == '}' && --depth == 0) {
+        return i;
+      }
+    }
+    return -1;
   }
 
   Object? _valueAt(int? index) =>
