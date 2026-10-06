@@ -1,3 +1,29 @@
+## 0.1.0
+
+ICU message format support. `tl`, `tlv` and `tlvm` now resolve
+ICU `plural`, `selectordinal` and `select` arguments inline in any
+translation string.
+
+* `{N, plural, ...}` with `=N` exact matches, CLDR plural categories
+  for the active locale (`zero`/`one`/`two`/`few`/`many`/`other`, via
+  `package:intl`), `offset:`, and `#` for the count (`'#'` for a
+  literal `#`).
+* `{N, selectordinal, ...}` with English ordinal rules; other
+  languages select `other`.
+* `{N, select, ...}` for gender and category choices.
+* Placeholders are substituted at every occurrence, and substituted
+  values are never re-read as placeholders.
+* Malformed ICU renders verbatim instead of throwing; malformed blocks
+  and missing ICU variables print a debug-mode warning.
+* `tlp` and `tlpm` are deprecated in favour of ICU strings with
+  `tlv`/`tlvm`. `tlv`/`tlvm` also read the nested zero/one/other
+  format, so call sites can migrate before every locale file does.
+* New `SignalTranslator().ready`: completes once SharedPreferences has
+  loaded and the stored locale is applied. It completes with an error
+  (instead of hanging) when SharedPreferences fails; translation keeps
+  working without persistence.
+* New dependency: `intl` (`>=0.19.0 <0.21.0`).
+
 ## 0.0.7
 
 Hotfix for 0.0.6: `currentLocale` now defaults to the `'sys'` sentinel
