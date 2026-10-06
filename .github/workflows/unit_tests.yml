@@ -22,3 +22,9 @@ jobs:
 
       - name: Run tests
         run: flutter test
+
+      - name: Run example tests
+        working-directory: example
+        run: |
+          flutter pub get
+          flutter test

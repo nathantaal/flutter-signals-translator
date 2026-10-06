@@ -1,181 +1,312 @@
+import 'package:flutter/foundation.dart';
+import 'package:intl/intl.dart' show Intl;
+
 import '../signals_translator.dart';
+import 'locale_canonical.dart';
 
-/// Parses an ICU forms string like ` one {# item} other {# items}` into a map
-/// of selector → form body.
-Map<String, String> _parseForms(String formsStr) {
-  final forms = <String, String>{};
-  int i = 0;
-  while (i < formsStr.length) {
-    while (i < formsStr.length && formsStr[i].trim().isEmpty) {
-      i++;
-    }
-    if (i >= formsStr.length) break;
+void _warn(String message) {
+  if (kDebugMode) debugPrint('signals_translator: $message');
+}
 
-    final keyStart = i;
-    while (i < formsStr.length &&
-        formsStr[i] != '{' &&
-        formsStr[i].trim().isNotEmpty) {
-      i++;
-    }
-    final key = formsStr.substring(keyStart, i).trim();
-    if (key.isEmpty) break;
+class _Malformed implements Exception {
+  const _Malformed(this.reason);
 
-    while (i < formsStr.length && formsStr[i].trim().isEmpty) {
-      i++;
-    }
-    if (i >= formsStr.length || formsStr[i] != '{') break;
+  final String reason;
+}
 
-    i++; // skip opening {
-    int depth = 1;
-    final contentStart = i;
-    while (i < formsStr.length && depth > 0) {
-      if (formsStr[i] == '{') {
-        depth++;
-      } else if (formsStr[i] == '}') {
-        depth--;
+/// Single-pass evaluator for `{N}` placeholders and
+/// `{N, plural|selectordinal|select, ...}` arguments. Values are inserted
+/// as-is and never re-scanned.
+class _MessageFormat {
+  _MessageFormat(this._src, this._values, this._key);
+
+  final String _src;
+  final List<Object?> _values;
+  final String _key;
+  int _pos = 0;
+
+  late final String _locale = _pluralLocale();
+
+  String format() {
+    final out = StringBuffer();
+    _message(out, null, nested: false);
+    return out.toString();
+  }
+
+  /// Appends text from [_pos] to [out]. [hash] is what `#` renders as inside
+  /// the nearest enclosing plural, or null outside one. When [nested], stops
+  /// at the `}` closing the enclosing form and returns true; returns false if
+  /// the input ends first.
+  bool _message(StringBuffer out, String? hash, {required bool nested}) {
+    while (_pos < _src.length) {
+      final char = _src[_pos];
+      if (char == '}' && nested) return true;
+      if (char == '{') {
+        final start = _pos;
+        try {
+          final argument = _argument(hash);
+          if (argument != null) {
+            out.write(argument);
+            continue;
+          }
+        } on _Malformed catch (e) {
+          _warn("malformed ICU argument in '$_key' at offset $start: ${e.reason}");
+        }
+        // Not an argument: keep the brace and re-read what follows as text.
+        _pos = start + 1;
+        out.write('{');
+      } else if (hash != null && char == '#') {
+        out.write(hash);
+        _pos++;
+      } else if (hash != null && char == "'" && _peek(1) == '#') {
+        final close = _src.indexOf("'", _pos + 1);
+        if (close == -1) {
+          out.write(char);
+          _pos++;
+        } else {
+          out.write(_src.substring(_pos + 1, close));
+          _pos = close + 1;
+        }
+      } else {
+        out.write(char);
+        _pos++;
       }
-      if (depth > 0) i++;
     }
-    forms[key] = formsStr.substring(contentStart, i);
-    i++; // skip closing }
+    return !nested;
   }
-  return forms;
-}
 
-String _pluralCategory(int count) {
-  if (count == 0) return 'zero';
-  if (count == 1) return 'one';
-  return 'other';
-}
+  /// Parses the argument whose `{` is at [_pos]. Returns null when the text
+  /// isn't an argument (e.g. `{name}`); throws [_Malformed] when it starts
+  /// like an ICU block but doesn't parse.
+  String? _argument(String? hash) {
+    final start = _pos;
+    _pos++;
+    _skipWhitespace();
+    final index = _digits();
+    if (index.isEmpty) return null;
+    final value = _valueAt(int.tryParse(index));
+    _skipWhitespace();
+    if (_eat('}')) return value?.toString() ?? _src.substring(start, _pos);
+    if (!_eat(',')) return null;
 
-/// Resolves `{N, plural, ...}` and `{N, select, ...}` blocks inside [template]
-/// using values from [variables]. Repeats until output stabilises so nested
-/// blocks expand. Remaining `{N}` placeholders are handled by the caller's
-/// normal substitution pass.
-String _resolveICUBlocks(String template, List<Object?> variables) {
-  String current = template;
-  while (true) {
-    final next = _resolveICUBlocksOnce(current, variables);
-    if (next == current) break;
-    current = next;
+    _skipWhitespace();
+    final type = _token();
+    if (type != 'plural' && type != 'selectordinal' && type != 'select') {
+      throw _Malformed('unsupported argument type "$type"');
+    }
+    _skipWhitespace();
+    if (!_eat(',')) throw _Malformed('expected "," after "$type"');
+
+    return type == 'select'
+        ? _select(value, index, hash)
+        : _plural(value, index, ordinal: type == 'selectordinal');
   }
-  return current;
-}
 
-String _resolveICUBlocksOnce(String template, List<Object?> variables) {
-  final re = RegExp(r'\{(\d+),\s*(plural|select),');
-  final buffer = StringBuffer();
-  int cursor = 0;
-
-  while (cursor < template.length) {
-    final match = re.firstMatch(template.substring(cursor));
-    if (match == null) {
-      buffer.write(template.substring(cursor));
-      break;
+  String _plural(Object? value, String index, {required bool ordinal}) {
+    _skipWhitespace();
+    var offset = 0;
+    if (_src.startsWith('offset:', _pos)) {
+      _pos += 'offset:'.length;
+      _skipWhitespace();
+      offset =
+          int.tryParse(_digits()) ??
+          (throw const _Malformed('expected a number after "offset:"'));
     }
 
-    final matchStart = cursor + match.start;
-    buffer.write(template.substring(cursor, matchStart));
+    final number = value is num ? value : num.tryParse('$value');
+    final adjusted = number == null ? null : number - offset;
+    final hash = switch (value) {
+      null => '',
+      _ when adjusted == null || offset == 0 => '$value',
+      _ => _formatNumber(adjusted),
+    };
 
-    final varIndex = int.parse(match.group(1)!);
-    final type = match.group(2)!;
-
-    int depth = 1;
-    int i = matchStart + 1;
-    while (i < template.length && depth > 0) {
-      if (template[i] == '{') {
-        depth++;
-      } else if (template[i] == '}') {
-        depth--;
+    final forms = _forms(hash);
+    if (value == null) {
+      _warn("missing value for {$index} in '$_key'");
+      return '';
+    }
+    if (number != null) {
+      for (final MapEntry(:key, value: form) in forms.entries) {
+        if (key.startsWith('=') && num.tryParse(key.substring(1)) == number) {
+          return form;
+        }
       }
-      i++;
     }
+    final category = switch (adjusted) {
+      null => 'other',
+      final num n when ordinal => _ordinalCategory(n),
+      final num n => _cardinalCategory(n, _fractionDigits('$value')),
+    };
+    return forms[category] ?? forms['other'] ?? '';
+  }
 
-    final innerStart = matchStart + match.group(0)!.length;
-    final formsStr = template.substring(innerStart, i - 1);
-    final forms = _parseForms(formsStr);
-    final value = varIndex < variables.length ? variables[varIndex] : null;
-
-    String resolved;
-    if (type == 'plural' && value != null) {
-      final count =
-          value is int ? value : int.tryParse(value.toString()) ?? 0;
-      final form = forms['=$count'] ??
-          forms[_pluralCategory(count)] ??
-          forms['other'] ??
-          '';
-      resolved = form.replaceAll('#', count.toString());
-    } else if (type == 'select' && value != null) {
-      resolved = forms[value.toString()] ?? forms['other'] ?? '';
-    } else {
-      resolved = '';
+  String _select(Object? value, String index, String? hash) {
+    final forms = _forms(hash);
+    if (value == null) {
+      _warn("missing value for {$index} in '$_key'");
+      return '';
     }
-
-    buffer.write(resolved);
-    cursor = i;
+    return forms['$value'] ?? forms['other'] ?? '';
   }
 
-  return buffer.toString();
-}
+  /// Parses `selector {form} ...}` up to and including the closing `}`.
+  Map<String, String> _forms(String? hash) {
+    final forms = <String, String>{};
+    while (true) {
+      _skipWhitespace();
+      if (_pos >= _src.length) throw const _Malformed('unclosed argument');
+      if (_eat('}')) return forms;
+      final selector = _token();
+      if (selector.isEmpty) throw const _Malformed('expected a selector');
+      _skipWhitespace();
+      if (!_eat('{')) throw _Malformed('expected "{" after "$selector"');
+      final body = StringBuffer();
+      if (!_message(body, hash, nested: true)) {
+        throw _Malformed('unclosed form "$selector"');
+      }
+      _pos++;
+      forms.putIfAbsent(selector, () => body.toString());
+    }
+  }
 
-String _lookupSingle(
-  Map<String, dynamic> translations,
-  String key, [
-  List<Object?> variables = const [],
-]) {
-  var translation = translations[key];
-  if (translation is! String) {
-    translation = key;
-  }
-  translation = _resolveICUBlocks(translation, variables);
-  for (var i = 0; i < variables.length; i++) {
-    translation = translation.replaceFirst('{$i}', variables[i].toString());
-  }
-  return translation;
-}
+  String _cardinalCategory(num count, int precision) => Intl.pluralLogic(
+    count,
+    zero: 'zero',
+    one: 'one',
+    two: 'two',
+    few: 'few',
+    many: 'many',
+    other: 'other',
+    locale: _locale,
+    precision: precision,
+    useExplicitNumberCases: false,
+  );
 
-String? _lookupPlural(
-  Map<String, dynamic> translations,
-  String key,
-  List<int> counts,
-) {
-  final value = translations[key];
-  if (value is String) {
-    return _lookupSingle(translations, key, counts);
-  }
-  if (value is Map) {
-    final forms = counts.map((c) {
-      if (c == 0) return 'zero';
-      if (c == 1) return 'one';
+  // intl ships cardinal rules only. English is the only built-in ordinal
+  // table; every other language uses `other`.
+  String _ordinalCategory(num count) {
+    if (_locale.split('_').first != 'en' || count != count.truncate()) {
       return 'other';
-    }).toList();
-    final formKey = forms.join('_');
-    String? form = value[formKey];
-    form ??= value.values.first.toString();
-    for (var i = 0; i < counts.length; i++) {
-      form = form?.replaceFirst('{$i}', counts[i].toString());
     }
-    return form;
+    final n = count.abs().toInt();
+    if (n % 10 == 1 && n % 100 != 11) return 'one';
+    if (n % 10 == 2 && n % 100 != 12) return 'two';
+    if (n % 10 == 3 && n % 100 != 13) return 'few';
+    return 'other';
   }
-  return key;
+
+  Object? _valueAt(int? index) =>
+      index != null && index < _values.length ? _values[index] : null;
+
+  String? _peek(int offset) {
+    final i = _pos + offset;
+    return i < _src.length ? _src[i] : null;
+  }
+
+  bool _eat(String char) {
+    if (_pos < _src.length && _src[_pos] == char) {
+      _pos++;
+      return true;
+    }
+    return false;
+  }
+
+  void _skipWhitespace() {
+    while (_pos < _src.length && _src[_pos].trim().isEmpty) {
+      _pos++;
+    }
+  }
+
+  String _digits() {
+    final start = _pos;
+    while (_pos < _src.length) {
+      final unit = _src.codeUnitAt(_pos);
+      if (unit < 0x30 || unit > 0x39) break;
+      _pos++;
+    }
+    return _src.substring(start, _pos);
+  }
+
+  String _token() {
+    final start = _pos;
+    while (_pos < _src.length) {
+      final char = _src[_pos];
+      if (char == '{' || char == '}' || char == ',' || char.trim().isEmpty) {
+        break;
+      }
+      _pos++;
+    }
+    return _src.substring(start, _pos);
+  }
+}
+
+String _pluralLocale() {
+  final translator = SignalTranslator();
+  return normalizeLocale(translator.activeLocale ?? translator.resolvedLocale);
+}
+
+String _formatNumber(num n) =>
+    n == n.truncate() ? n.truncate().toString() : n.toString();
+
+int _fractionDigits(String number) {
+  final dot = number.indexOf('.');
+  return dot == -1 ? 0 : number.length - dot - 1;
+}
+
+String _format(String template, List<Object?> values, String key) {
+  if (!template.contains('{')) return template;
+  return _MessageFormat(template, values, key).format();
+}
+
+/// Picks a form from a legacy nested-map plural using explicit numbers
+/// (0 → `zero`, 1 → `one`, else `other`), joined with `_` per count.
+String? _legacyPluralForm(Map<dynamic, dynamic> forms, List<int?> counts) {
+  final formKey = counts
+      .map((c) => switch (c) {
+            0 => 'zero',
+            1 => 'one',
+            _ => 'other',
+          })
+      .join('_');
+  final form = forms[formKey] ?? (forms.isEmpty ? null : forms.values.first);
+  return form?.toString();
+}
+
+String _lookupSingle(String key, [List<Object?> values = const []]) {
+  final translation = SignalTranslator().internalTranslations[key];
+  if (translation is Map && values.isNotEmpty) {
+    final counts = [
+      for (final v in values) v is int ? v : int.tryParse('$v'),
+    ];
+    return _format(_legacyPluralForm(translation, counts) ?? key, values, key);
+  }
+  return _format(translation is String ? translation : key, values, key);
+}
+
+String? _lookupPlural(String key, List<int> counts) {
+  final translation = SignalTranslator().internalTranslations[key];
+  if (translation is! String && translation is! Map) return key;
+  return _lookupSingle(key, counts);
 }
 
 /// Translates a key using the current locale.
-String tl(String key) =>
-    _lookupSingle(SignalTranslator().internalTranslations, key);
+String tl(String key) => _lookupSingle(key);
 
 /// Translates a key with a single variable using the current locale.
 ///
-/// Also resolves `{N, plural, ...}` / `{N, select, ...}` ICU blocks in the
-/// translation. For plural blocks, [variable] should be a stringified integer
-/// (`count.toString()`); non-numeric values fall through to the `other` form.
-String tlv(String key, String variable) =>
-    _lookupSingle(SignalTranslator().internalTranslations, key, [variable]);
+/// Also resolves `{N, plural, ...}`, `{N, selectordinal, ...}` and
+/// `{N, select, ...}` ICU blocks in the translation. Plural categories follow
+/// the CLDR rules of the active locale; a [variable] that isn't a number
+/// selects the `other` form and is shown as-is for `#`.
+String tlv(String key, String variable) => _lookupSingle(key, [variable]);
 
 /// Translates a key with multiple variables using the current locale. ICU
-/// blocks referenced by index are resolved before plain `{N}` substitution.
+/// blocks and `{N}` placeholders are resolved in one pass, so every
+/// occurrence of a placeholder is substituted and substituted values are
+/// never re-read as placeholders.
 String tlvm(String key, List<String> variables) =>
-    _lookupSingle(SignalTranslator().internalTranslations, key, variables);
+    _lookupSingle(key, variables);
 
 /// Translates a pluralized key for a single count using the current locale.
 ///
@@ -195,8 +326,7 @@ String tlvm(String key, List<String> variables) =>
   'Replace the nested zero/one/other JSON object with an inline ICU string, '
   'e.g. "{0, plural, =0 {none} one {# item} other {# items}}".',
 )
-String? tlp(String key, int count) =>
-    _lookupPlural(SignalTranslator().internalTranslations, key, [count]);
+String? tlp(String key, int count) => _lookupPlural(key, [count]);
 
 /// Translates a pluralized key for multiple counts using the current locale.
 ///
@@ -210,5 +340,4 @@ String? tlp(String key, int count) =>
   'Replace the nested underscore-keyed JSON object with inline ICU strings, '
   'e.g. "{0, plural, one {# item} other {# items}} and {1, plural, one {# coupon} other {# coupons}}".',
 )
-String? tlpm(String key, List<int> counts) =>
-    _lookupPlural(SignalTranslator().internalTranslations, key, counts);
+String? tlpm(String key, List<int> counts) => _lookupPlural(key, counts);

@@ -141,30 +141,34 @@ Text(tlvm('fruit', ['2', '3']));
 
 ## ICU message format
 
-ICU-style `{N, plural, ...}` and `{N, select, ...}` blocks can be embedded directly inside any translation string value. They are resolved automatically by `tl`, `tlv`, and `tlvm` — no separate function needed.
+ICU-style `{N, plural, ...}`, `{N, selectordinal, ...}` and `{N, select, ...}` blocks can be embedded directly inside any translation string value. They are resolved automatically by `tl`, `tlv`, and `tlvm` — no separate function needed.
 ICU is a recognized international standard.
 This solves problems the nested-JSON plural approach cannot, such as **verb agreement** ("There *is* 1 winner" vs "There *are* 5 winners") where the entire sentence structure changes, not just a noun.
 
 ### Syntax
 
 ```
-{variableIndex, plural,  form1 {text} form2 {text} ...}
-{variableIndex, select,  value1 {text} value2 {text} other {text}}
+{variableIndex, plural,        [offset:n] form1 {text} form2 {text} ...}
+{variableIndex, selectordinal, form1 {text} form2 {text} ...}
+{variableIndex, select,        value1 {text} value2 {text} other {text}}
 ```
 
-- `variableIndex` — zero-based index matching the variable passed to `tlv`/`tlvm`.
-- Inside a form body, `#` is replaced with the count value.
-- Remaining `{N}` placeholders in the output are substituted normally after ICU resolution.
-- Multiple ICU blocks can appear in the same string.
+- `variableIndex` — zero-based index matching the variable passed to `tlv`/`tlvm`. Whitespace around the index and type is allowed.
+- Inside a plural or selectordinal form, `#` is replaced with the count (minus the `offset`, if any). In nested blocks, `#` refers to the innermost plural. Write `'#'` for a literal `#`.
+- `{N}` placeholders are substituted everywhere they appear, inside and outside ICU blocks. Substituted values are inserted as-is and never re-read as placeholders.
+- Multiple ICU blocks can appear in the same string, and blocks can be nested.
+- A count that isn't a number selects the `other` form and is shown as-is for `#`.
+- A malformed block (for example an unclosed `{`) is rendered verbatim, and a block whose variable is missing renders as empty. Both print a debug-mode warning naming the key.
 
 ### Plural forms
 
 | Key | When used |
 |-----|-----------|
-| `=N` | Exact match — takes priority over named categories. |
-| `zero` | Count is 0 (when no `=0` is present). |
-| `one` | Count is 1 (when no `=1` is present). |
+| `=N` | Exact match on the count — takes priority over categories. With `offset`, exact matches use the count before the offset is subtracted. |
+| `zero` `one` `two` `few` `many` | The [CLDR plural category](https://cldr.unicode.org/index/cldr-spec/plural-rules) of the count in the active locale (via `package:intl`). English only has `one` and `other`, so English needs `=0` for a zero message; Polish uses `few`/`many`, Arabic uses all six. |
 | `other` | All other counts, and the fallback when no exact/category match is found. |
+
+`selectordinal` uses English ordinal categories (`one` → 1st, `two` → 2nd, `few` → 3rd, `other` → 4th); for other languages it always selects `other`.
 
 ### Example: verb agreement (is / are)
 
@@ -273,7 +277,7 @@ Text(tlvm('order_line', ['3', '\$4.50'])); // 3 items costing $4.50 each
 
 ### ICU vs nested-JSON pluralization
 
-> **The nested-JSON approach (`tlp`/`tlpm`) is deprecated.** Prefer ICU inline for all new translation keys. Both formats still work and can coexist in the same file during migration.
+> **The nested-JSON approach (`tlp`/`tlpm`) is deprecated.** Prefer ICU inline for all new translation keys. Both formats still work and can coexist in the same file during migration. `tlv`/`tlvm` also read keys that are still in the nested-JSON format (selecting `zero`/`one`/`other` the same way `tlp` does), so you can switch a call site to `tlv` before every locale file has been converted.
 
 | | Nested JSON (`tlp`/`tlpm`) ⚠️ deprecated | ICU inline (`tl`/`tlv`/`tlvm`) |
 |---|---|---|

@@ -140,7 +140,7 @@ class _IcuExampleScreenState extends State<IcuExampleScreen> {
               title: 'Plural + variable — search_results',
               subtitle:
                   'ICU block and a regular {N} variable in the same string.\n'
-                  'Key: "Found {0, plural, ...} for \\"{1}\\"."',
+                  'Key: "Found {0, plural, ...} for "{1}"."',
               result: tlvm('search_results', [
                 _searchCount.value.toString(),
                 _searchQuery.value,
@@ -170,21 +170,19 @@ class _IcuExampleScreenState extends State<IcuExampleScreen> {
             const SizedBox(height: 24),
 
             Text(
-              'Known issues',
+              'Edge cases',
               style: Theme.of(context).textTheme.titleLarge,
             ),
             const SizedBox(height: 4),
             Text(
               'Each card compares the expected output with what the resolver '
-              'returns today. Switch to English (UK) to see the ICU keys '
-              'missing from en_GB.json. Locale-specific plural rules '
-              '(fr/pl/ru/ar) and the ready future are covered by unit tests '
-              'only.',
+              'returns. Locale-specific plural rules (fr/pl/ru/ar) and the '
+              'ready future are covered by unit tests only.',
               style: Theme.of(context).textTheme.bodySmall,
             ),
             const SizedBox(height: 12),
-            for (final issue in _knownIssues()) ...[
-              _KnownIssueCard(issue: issue),
+            for (final edgeCase in _edgeCases()) ...[
+              _EdgeCaseCard(edgeCase: edgeCase),
               const SizedBox(height: 12),
             ],
           ],
@@ -193,75 +191,75 @@ class _IcuExampleScreenState extends State<IcuExampleScreen> {
     );
   }
 
-  List<_KnownIssue> _knownIssues() => [
-    _icuIssue(
-      'Nested plural: # uses the outer count',
+  List<_EdgeCase> _edgeCases() => [
+    _icuCase(
+      'Nested plural: # binds to the inner count',
       '{0, plural, one {One basket with {1, plural, one {# apple} other {# apples}}} '
           'other {# baskets with {1, plural, one {# apple} other {# apples}}}}',
       ['1', '3'],
       'One basket with 3 apples',
     ),
-    _icuIssue(
-      'Non-integer count picks the =0 form',
+    _icuCase(
+      'Non-integer count selects "other"',
       'You have {0, plural, =0 {no messages} one {# message} other {# messages}} in your inbox.',
       ['1.5'],
       'You have 1.5 messages in your inbox.',
     ),
-    _icuIssue(
+    _icuCase(
       'English has no "zero" plural category',
       '{0, plural, zero {zero form} one {# item} other {# items}}',
       ['0'],
       '0 items',
     ),
-    _icuIssue(
-      'Truncated block throws',
+    _icuCase(
+      'Truncated block renders verbatim',
       'abc {0, plural,',
       ['1'],
       'abc {0, plural,',
     ),
-    _icuIssue(
-      'Unclosed block swallows the rest of the string',
+    _icuCase(
+      'Unclosed block renders verbatim',
       'x {0, plural, one {a} other {b}',
       ['1'],
       'x {0, plural, one {a} other {b}',
     ),
-    _icuIssue(
-      "Quoted '#' is not kept literal",
+    _icuCase(
+      "Quoted '#' stays a literal #",
       "{0, plural, one {# issue, see ticket '#'{1}} other {# issues, see ticket '#'{1}}}",
       ['1', '42'],
       '1 issue, see ticket #42',
     ),
-    _icuIssue(
-      'Repeated placeholder is substituted only once',
+    _icuCase(
+      'Repeated placeholder is substituted everywhere',
       '{0} likes {1, select, female {her} other {their}} cat, says {0}.',
       ['Ann', 'female'],
       'Ann likes her cat, says Ann.',
     ),
-    _icuIssue(
-      'Substituted value is re-scanned for placeholders',
+    _icuCase(
+      'Substituted values are not re-scanned',
       '{0} and {1}',
       ['{1}', 'b'],
       '{1} and b',
     ),
-    _icuIssue(
-      'Whitespace after "{" is not recognised',
+    _icuCase(
+      'Whitespace inside the argument is accepted',
       '{ 0, plural, one {# item} other {# items}}',
       ['2'],
       '2 items',
     ),
-    _icuIssue(
-      'selectordinal is not supported',
+    _icuCase(
+      'selectordinal (English ordinal suffixes)',
       '{0, selectordinal, one {#st} two {#nd} few {#rd} other {#th}}',
       ['22'],
       '22nd',
     ),
-    _icuIssue(
-      'plural offset renders an empty string',
+    _icuCase(
+      'plural offset',
       '{0, plural, offset:1 =0 {nobody} =1 {only {1}} one {{1} and # other} other {{1} and # others}}',
       ['2', 'Ann'],
       'Ann and 1 other',
     ),
-    _KnownIssue(
+    _EdgeCase(
       title: 'tlv on a key still in the nested-map (tlp) format',
       template: 'I have {0} apples',
       values: const ['0'],
@@ -271,12 +269,12 @@ class _IcuExampleScreenState extends State<IcuExampleScreen> {
     ),
   ];
 
-  _KnownIssue _icuIssue(
+  _EdgeCase _icuCase(
     String title,
     String template,
     List<String> values,
     String expected,
-  ) => _KnownIssue(
+  ) => _EdgeCase(
     title: title,
     template: template,
     values: values,
@@ -293,8 +291,8 @@ String _attempt(String Function() translate) {
   }
 }
 
-class _KnownIssue {
-  const _KnownIssue({
+class _EdgeCase {
+  const _EdgeCase({
     required this.title,
     required this.template,
     required this.values,
@@ -309,15 +307,15 @@ class _KnownIssue {
   final String actual;
 }
 
-class _KnownIssueCard extends StatelessWidget {
-  const _KnownIssueCard({required this.issue});
+class _EdgeCaseCard extends StatelessWidget {
+  const _EdgeCaseCard({required this.edgeCase});
 
-  final _KnownIssue issue;
+  final _EdgeCase edgeCase;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final passes = issue.actual == issue.expected;
+    final passes = edgeCase.actual == edgeCase.expected;
     final statusColor = passes ? Colors.green : theme.colorScheme.error;
     const mono = TextStyle(fontFamily: 'monospace', fontSize: 12);
     return Card(
@@ -334,20 +332,23 @@ class _KnownIssueCard extends StatelessWidget {
                 ),
                 const SizedBox(width: 8),
                 Expanded(
-                  child: Text(issue.title, style: theme.textTheme.titleMedium),
+                  child: Text(
+                    edgeCase.title,
+                    style: theme.textTheme.titleMedium,
+                  ),
                 ),
               ],
             ),
             const SizedBox(height: 8),
-            Text('Template: ${issue.template}', style: mono),
+            Text('Template: ${edgeCase.template}', style: mono),
             Text(
-              'Values: ${issue.values.map((v) => "'$v'").join(', ')}',
+              'Values: ${edgeCase.values.map((v) => "'$v'").join(', ')}',
               style: mono,
             ),
             const Divider(height: 20),
-            Text('Expected: ${issue.expected}'),
+            Text('Expected: ${edgeCase.expected}'),
             Text(
-              'Actual: ${issue.actual}',
+              'Actual: ${edgeCase.actual}',
               style: TextStyle(color: statusColor, fontWeight: FontWeight.bold),
             ),
           ],
