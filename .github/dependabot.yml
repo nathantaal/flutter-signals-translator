@@ -6,6 +6,13 @@
 version: 2
 updates:
   - package-ecosystem: "pub"
-    directory: "/"  # Root folder where your pubspec.yaml lives
+    directories:
+      - "/packages/signals_translator_core"
+      - "/packages/signals_translator"
+      - "/packages/signals_translator/example"
+      - "/packages/alien_signals_translator"
+      - "/packages/alien_signals_translator/example"
+      - "/packages/solidart_translator"
+      - "/packages/solidart_translator/example"
     schedule:
       interval: "weekly"
