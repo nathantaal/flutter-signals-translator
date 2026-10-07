@@ -6,7 +6,11 @@ on:
   workflow_dispatch:
 
 jobs:
+  test:
+    uses: ./.github/workflows/unit_tests.yml
+
   publish:
+    needs: test
     runs-on: ubuntu-latest
     permissions:
       id-token: write
@@ -21,7 +25,6 @@ jobs:
 
       - run: flutter pub get
       - run: flutter analyze
-      - run: flutter test
 
       - name: Export pub.dev OIDC token
         uses: actions/github-script@v7
