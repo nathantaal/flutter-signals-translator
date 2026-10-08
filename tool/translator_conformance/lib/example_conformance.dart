@@ -111,7 +111,6 @@ void runExampleConformance(ExampleHarness h) {
 
     expect(find.text('Nederlands'), findsOneWidget);
     expect(find.text('Current locale: nl'), findsOneWidget);
-    expect(find.text('Requested asset: $_bundledPath/nl.json'), findsOneWidget);
     expect(find.text('Active asset: $_bundledPath/nl.json'), findsOneWidget);
   });
 }

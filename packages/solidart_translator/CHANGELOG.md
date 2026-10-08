@@ -1,6 +1,11 @@
 ## 0.2.0
 
 * Initial release, at parity with signals_translator 0.2.0.
+* Plurals are ICU-only: there is no `tlp`/`tlpm` and no nested
+  `zero`/`one`/`other` JSON format. Asset files must use canonical names
+  (`en_GB.json`, not `en-gb.json`). There is no `assetLocationString`
+  (use `activeAssetPath`) and no public `prefs`. All of these were removed
+  from signals_translator in 0.2.0 as **BREAKING** changes.
 * New `translationsPath` setting to load translation files from another
   directory, such as a shared package's assets
   (`packages/<name>/assets/translations`).

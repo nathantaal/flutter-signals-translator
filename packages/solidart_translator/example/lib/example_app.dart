@@ -1,6 +1,3 @@
-// The example deliberately demonstrates the deprecated tlp/tlpm API.
-// ignore_for_file: deprecated_member_use
-
 import 'package:flutter/material.dart';
 import 'package:flutter_solidart/flutter_solidart.dart';
 import 'package:solidart_translator/solidart_translator.dart';
@@ -124,9 +121,6 @@ class ExampleApp extends StatelessWidget {
                                   'Fallback locale: ${translator.fallbackLocale}',
                                 ),
                                 Text(
-                                  'Requested asset: ${translator.assetLocationString.value}',
-                                ),
-                                Text(
                                   'Active asset: ${translator.activeAssetPath ?? 'none loaded'}',
                                 ),
                               ],
@@ -179,40 +173,6 @@ class ExampleApp extends StatelessWidget {
                                     'He came in {0}, while his partner came in at the {1} place',
                                     ['first', 'second'],
                                   ),
-                                ),
-                                SizedBox(height: 8),
-                                Text(
-                                  'Pluralization (tlp) examples:',
-                                  style: TextStyle(fontWeight: FontWeight.bold),
-                                ),
-                                Text(tlp('I have {0} apples', 0) ?? ''),
-                                Text(tlp('I have {0} apples', 1) ?? ''),
-                                Text(tlp('I have {0} apples', 5) ?? ''),
-                                SizedBox(height: 8),
-                                Text(
-                                  'Pluralization with multiple counts (tlpm) examples:',
-                                  style: TextStyle(fontWeight: FontWeight.bold),
-                                ),
-                                Text(
-                                  tlpm(
-                                        'I have {0} strawberries and {1} bananas',
-                                        [1, 1],
-                                      ) ??
-                                      '',
-                                ),
-                                Text(
-                                  tlpm(
-                                        'I have {0} strawberries and {1} bananas',
-                                        [0, 0],
-                                      ) ??
-                                      '',
-                                ),
-                                Text(
-                                  tlpm(
-                                        'I have {0} strawberries and {1} bananas',
-                                        [2, 3],
-                                      ) ??
-                                      '',
                                 ),
                               ],
                             ),

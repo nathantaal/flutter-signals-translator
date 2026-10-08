@@ -280,22 +280,6 @@ String _format(
   return _MessageFormat(template, values, key, translator).format();
 }
 
-/// Picks a form from a legacy nested-map plural using explicit numbers
-/// (0 → `zero`, 1 → `one`, else `other`), joined with `_` per count.
-String? _legacyPluralForm(Map<dynamic, dynamic> forms, List<int?> counts) {
-  final formKey = counts
-      .map(
-        (c) => switch (c) {
-          0 => 'zero',
-          1 => 'one',
-          _ => 'other',
-        },
-      )
-      .join('_');
-  final form = forms[formKey] ?? (forms.isEmpty ? null : forms.values.first);
-  return form?.toString();
-}
-
 /// Looks up [key] in [translator]'s loaded translations and resolves `{N}`
 /// placeholders and ICU `plural` / `selectordinal` / `select` blocks with
 /// [values]. Returns [key] when there is no translation.
@@ -307,15 +291,6 @@ String translate(
   List<Object?> values = const [],
 ]) {
   final translation = translator.internalTranslations[key];
-  if (translation is Map && values.isNotEmpty) {
-    final counts = [for (final v in values) v is int ? v : int.tryParse('$v')];
-    return _format(
-      translator,
-      _legacyPluralForm(translation, counts) ?? key,
-      values,
-      key,
-    );
-  }
   return _format(
     translator,
     translation is String ? translation : key,
@@ -323,29 +298,3 @@ String translate(
     key,
   );
 }
-
-/// Legacy nested-map pluralization. Adapters build the deprecated `tlp`
-/// and `tlpm` on this.
-String? translatePlural(
-  TranslatorCore translator,
-  String key,
-  List<int> counts,
-) {
-  final translation = translator.internalTranslations[key];
-  if (translation is! String && translation is! Map) return key;
-  return translate(translator, key, counts);
-}
-
-/// Deprecation message for adapters' `tlp`.
-const String tlpDeprecationMessage =
-    'Use tlv with an ICU plural block instead: '
-    'tlv(key, count.toString()). '
-    'Replace the nested zero/one/other JSON object with an inline ICU string, '
-    'e.g. "{0, plural, =0 {none} one {# item} other {# items}}".';
-
-/// Deprecation message for adapters' `tlpm`.
-const String tlpmDeprecationMessage =
-    'Use tlvm with ICU plural blocks instead: '
-    'tlvm(key, counts.map((c) => c.toString()).toList()). '
-    'Replace the nested underscore-keyed JSON object with inline ICU strings, '
-    'e.g. "{0, plural, one {# item} other {# items}} and {1, plural, one {# coupon} other {# coupons}}".';

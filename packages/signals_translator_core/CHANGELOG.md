@@ -1,7 +1,16 @@
 ## 0.2.0
 
-* Initial release. Extracted from signals_translator 0.1.0; existing
-  behaviour unchanged.
+* Initial release. Extracted from signals_translator 0.1.0.
+* **BREAKING** (compared to signals_translator 0.1.0):
+  * No `translatePlural`, and nested `zero`/`one`/`other` JSON objects are
+    no longer read; `translate` returns the key for them. Use inline ICU
+    plural blocks.
+  * Only canonical asset names (`en_GB.json`) are loaded; hyphen-named
+    files (`en-gb.json`) are no longer probed.
+  * The persisted locale is saved in canonical form; older raw values are
+    rewritten on the next start.
+  * `prefs` is private. There is no `requestedAssetPath`, and adapters no
+    longer expose `assetLocationString`; use `activeAssetPath`.
 * New `translationsPath` setting to load translation files from another
   directory, such as a shared package's assets
   (`packages/<name>/assets/translations`).

@@ -8,8 +8,6 @@ class TranslatorHarness {
     required this.tl,
     required this.tlv,
     required this.tlvm,
-    required this.tlp,
-    required this.tlpm,
   });
 
   /// Returns the adapter's singleton, i.e. `SignalTranslator()`.
@@ -21,6 +19,4 @@ class TranslatorHarness {
   final String Function(String key) tl;
   final String Function(String key, String variable) tlv;
   final String Function(String key, List<String> variables) tlvm;
-  final String? Function(String key, int count) tlp;
-  final String? Function(String key, List<int> counts) tlpm;
 }

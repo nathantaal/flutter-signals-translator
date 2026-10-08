@@ -12,18 +12,6 @@
     "Current locale: {0}": "Current locale: {0}",
     "My favorite color is blue.": "My favorite color is blue.",
     "I took the elevator to the 5th floor.": "I took the elevator to the 5th floor.",
-    "I have {0} apples": {
-      "zero": "I have no apples",
-      "one": "I have 1 apple",
-      "other": "I have {0} apples"
-    },
-    "I have {0} strawberries and {1} bananas": {
-      "zero_zero": "I have no strawberries and no bananas",
-      "one_one": "I have 1 strawberry and 1 banana",
-      "one_other": "I have 1 strawberry and {1} bananas",
-      "other_one": "I have {0} strawberries and 1 banana",
-      "other_other": "I have {0} strawberries and {1} bananas"
-    },
     "ICU Examples": "ICU Examples",
     "inbox_count": "You have {0, plural, =0 {no messages} one {# message} other {# messages}} in your inbox.",
     "winner_announcement": "There {0, plural, one {is # winner} other {are # winners}}!",

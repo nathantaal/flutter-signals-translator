@@ -52,8 +52,6 @@ void runTranslatorConformance(TranslatorHarness h) {
   String tl(String key) => h.tl(key);
   String tlv(String key, String variable) => h.tlv(key, variable);
   String tlvm(String key, List<String> variables) => h.tlvm(key, variables);
-  String? tlp(String key, int count) => h.tlp(key, count);
-  String? tlpm(String key, List<int> counts) => h.tlpm(key, counts);
 
   const mockEnJson = '''
   {
@@ -365,76 +363,6 @@ void runTranslatorConformance(TranslatorHarness h) {
     });
   });
 
-  group('pluralization', () {
-    test('pluralizes a single count', () async {
-      const pluralJson = '''
-      {
-        "language": "English",
-        "translations": {
-          "I have {0} apples": {
-            "zero": "I have no apples",
-            "one": "I have 1 apple",
-            "other": "I have {0} apples"
-          }
-        }
-      }
-      ''';
-
-      useAssets({'assets/translations/en.json': pluralJson});
-
-      await signalTranslator!.loadLocale('en');
-      expect(tlp('I have {0} apples', 0), 'I have no apples');
-      expect(tlp('I have {0} apples', 1), 'I have 1 apple');
-      expect(tlp('I have {0} apples', 2), 'I have 2 apples');
-      expect(tlp('I have {0} apples', 42), 'I have 42 apples');
-    });
-
-    test(
-      'pluralizes multiple counts and falls back to the key when missing',
-      () async {
-        const pluralMultiJson = '''
-      {
-        "language": "English",
-        "translations": {
-          "I have {0} strawberries and {1} bananas": {
-            "zero_zero": "I have no strawberries and no bananas",
-            "one_one": "I have 1 strawberry and 1 banana",
-            "one_other": "I have 1 strawberry and {1} bananas",
-            "other_one": "I have {0} strawberries and 1 banana",
-            "other_other": "I have {0} strawberries and {1} bananas"
-          }
-        }
-      }
-      ''';
-
-        useAssets({'assets/translations/en.json': pluralMultiJson});
-
-        await signalTranslator!.loadLocale('en');
-        expect(
-          tlpm('I have {0} strawberries and {1} bananas', [0, 0]),
-          'I have no strawberries and no bananas',
-        );
-        expect(
-          tlpm('I have {0} strawberries and {1} bananas', [1, 1]),
-          'I have 1 strawberry and 1 banana',
-        );
-        expect(
-          tlpm('I have {0} strawberries and {1} bananas', [1, 3]),
-          'I have 1 strawberry and 3 bananas',
-        );
-        expect(
-          tlpm('I have {0} strawberries and {1} bananas', [2, 1]),
-          'I have 2 strawberries and 1 banana',
-        );
-        expect(
-          tlpm('I have {0} strawberries and {1} bananas', [2, 5]),
-          'I have 2 strawberries and 5 bananas',
-        );
-        expect(tlpm('nonexistent_key', [1, 2]), 'nonexistent_key');
-      },
-    );
-  });
-
   group('regional fallback chain', () {
     const mockEnGbJson = '''
   {
@@ -643,9 +571,8 @@ void runTranslatorConformance(TranslatorHarness h) {
       await signalTranslator!.loadLocale('EN');
       expect(signalTranslator!.currentLocale, 'en');
 
-      // Prefs keep the raw input so legacy callers round-trip unchanged.
       final prefs = await SharedPreferences.getInstance();
-      expect(prefs.getString('locale'), 'EN');
+      expect(prefs.getString('locale'), 'en');
     });
 
     test(
@@ -655,7 +582,7 @@ void runTranslatorConformance(TranslatorHarness h) {
         expect(signalTranslator!.currentLocale, 'en_GB');
 
         final prefs = await SharedPreferences.getInstance();
-        expect(prefs.getString('locale'), 'en-gb');
+        expect(prefs.getString('locale'), 'en_GB');
       },
     );
 
@@ -664,7 +591,7 @@ void runTranslatorConformance(TranslatorHarness h) {
       expect(signalTranslator!.currentLocale, 'en_GB');
 
       final prefs = await SharedPreferences.getInstance();
-      expect(prefs.getString('locale'), 'EN_gB');
+      expect(prefs.getString('locale'), 'en_GB');
     });
 
     test('preserves canonical regional input unchanged', () async {
@@ -692,7 +619,7 @@ void runTranslatorConformance(TranslatorHarness h) {
         expect(tl('SCRIPT_KEY'), 'script asset loaded');
 
         final prefs = await SharedPreferences.getInstance();
-        expect(prefs.getString('locale'), 'zh-hans');
+        expect(prefs.getString('locale'), 'zh_Hans');
       },
     );
 
@@ -883,66 +810,41 @@ void runTranslatorConformance(TranslatorHarness h) {
     );
   });
 
-  group('backwards-compat for legacy file names', () {
-    test(
-      'loads a legacy hyphen-named asset when only that file ships',
-      () async {
-        useAssets({
-          'assets/translations/en-gb.json': '''
-          {
-            "language": "English (UK, legacy)",
-            "translations": {"colour": "colour (legacy UK)"}
-          }
-        ''',
-        });
-
-        await signalTranslator!.loadLocale('en-gb');
-
-        expect(signalTranslator!.currentLocale, 'en_GB');
-        expect(signalTranslator!.activeLocale, 'en-gb');
-        expect(tl('colour'), 'colour (legacy UK)');
-      },
-    );
-
-    test('prefers the canonical file when both shapes ship', () async {
+  group('legacy hyphen-named locales', () {
+    test('a hyphen-named asset is not loaded', () async {
       useAssets({
         'assets/translations/en-gb.json': '''
-          {"language": "Legacy", "translations": {"colour": "from legacy"}}
+          {"language": "Legacy", "translations": {"legacy_only": "from legacy"}}
         ''',
-        'assets/translations/en_GB.json': '''
-          {"language": "Canonical", "translations": {"colour": "from canonical"}}
-        ''',
+        'assets/translations/en.json': mockEnJson,
       });
 
       await signalTranslator!.loadLocale('en-gb');
 
-      expect(signalTranslator!.activeLocale, 'en_GB');
-      expect(tl('colour'), 'from canonical');
+      expect(signalTranslator!.currentLocale, 'en_GB');
+      expect(signalTranslator!.activeLocale, 'en');
+      expect(tl('legacy_only'), 'legacy_only');
     });
 
-    test('a legacy hyphen-form value persisted by an older version still loads '
-        'across restarts', () async {
-      // Simulate an install upgraded from <0.0.6 that has 'en-gb' stored
-      // and ships only en-gb.json.
+    test('a hyphen-form value persisted by an older version is kept and '
+        'rewritten to the canonical form', () async {
       SharedPreferences.setMockInitialValues({'locale': 'en-gb'});
       useAssets({
-        'assets/translations/en-gb.json': '''
-            {"language": "Legacy UK", "translations": {"colour": "colour (legacy)"}}
+        'assets/translations/en_GB.json': '''
+            {"language": "English (UK)", "translations": {"colour": "colour (UK)"}}
           ''',
       });
 
       h.reset();
       final fresh = h.create();
-      await Future<void>.delayed(const Duration(milliseconds: 100));
+      await fresh.ready;
 
       expect(fresh.currentLocale, 'en_GB');
-      expect(fresh.activeLocale, 'en-gb');
-      expect(tl('colour'), 'colour (legacy)');
+      expect(fresh.activeLocale, 'en_GB');
+      expect(tl('colour'), 'colour (UK)');
 
-      // Prefs are not silently rewritten to the canonical form, so the
-      // next cold start still finds en-gb.json.
       final prefs = await SharedPreferences.getInstance();
-      expect(prefs.getString('locale'), 'en-gb');
+      expect(prefs.getString('locale'), 'en_GB');
     });
   });
 
@@ -1354,9 +1256,8 @@ void runTranslatorConformance(TranslatorHarness h) {
     });
   });
 
-  group('tlp to tlv migration', () {
-    test('tlv selects the plural form from a locale that still uses the '
-        'nested-map format', () async {
+  group('nested-map translations', () {
+    test('are no longer supported and fall back to the key', () async {
       useAssets({
         'assets/translations/en.json': '''
             {
@@ -1369,9 +1270,9 @@ void runTranslatorConformance(TranslatorHarness h) {
       });
       await signalTranslator!.loadLocale('en');
 
-      expect(tlv('apples', '0'), 'No apples');
-      expect(tlv('apples', '1'), 'One apple');
-      expect(tlv('apples', '5'), '5 apples');
+      expect(tl('apples'), 'apples');
+      expect(tlv('apples', '1'), 'apples');
+      expect(tlvm('apples', ['1', '2']), 'apples');
     });
   });
 

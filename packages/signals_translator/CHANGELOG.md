@@ -1,15 +1,43 @@
 ## 0.2.0
 
-* Internals moved to the new `signals_translator_core` package; no breaking
-  API change.
+### BREAKING
+
+* **Removed `tlp` and `tlpm`** (deprecated since 0.1.0). Use `tlv`/`tlvm`
+  with inline ICU plural blocks instead.
+* **Removed support for the nested `zero`/`one`/`other` JSON format.** A
+  translation value that is an object is no longer read: `tl`, `tlv` and
+  `tlvm` return the key. Convert each nested object to an ICU string, e.g.
+  `{"zero": "No apples", "one": "1 apple", "other": "{0} apples"}` becomes
+  `"{0, plural, =0 {No apples} one {# apple} other {# apples}}"`. See
+  "Migrating from tlp/tlpm" in the README.
+* **Hyphen-named asset files are no longer loaded.** `en-gb.json` must be
+  renamed to the canonical `en_GB.json` (and `zh-hans.json` to
+  `zh_Hans.json`). Before, `loadLocale('en-gb')` also probed the raw
+  `en-gb.json`; now only canonical names are tried, and a missing file falls
+  back to the bare language and then `fallbackLocale`.
+* **The persisted locale is now saved in canonical form** (`en_GB`, not the
+  raw `en-gb` or `EN_gB` passed to `loadLocale`). A raw value stored by an
+  older version is still honoured and is rewritten to the canonical form on
+  the next start, so users keep their chosen language.
+* **Removed `assetLocationString`.** It showed the requested asset path
+  before fallback, which could name a file that doesn't exist. Use
+  `activeAssetPath` (the file that was actually loaded); it is reactive inside
+  `SignalBuilder` and effects.
+* **`prefs` is no longer public.** It threw `LateInitializationError` before
+  `ready` or when SharedPreferences failed, and writing the `'locale'` key
+  directly bypassed the translator. Use `loadLocale` to change the locale and
+  `ready` to wait for the stored one.
+* **Requires signals ^7.1.0** (signals 6.x is no longer supported). README
+  and example use `SignalBuilder` instead of the deprecated `Watch`.
+
+### Other changes
+
+* Internals moved to the new `signals_translator_core` package.
 * New sibling packages with the same API: `alien_signals_translator` and
   `solidart_translator`.
 * New `translationsPath` setting to load translation files from another
   directory, such as a shared package's assets
   (`packages/<name>/assets/translations`).
-* **Breaking:** requires signals ^7.1.0 (signals 6.x is no longer
-  supported). README and example use `SignalBuilder` instead of the
-  deprecated `Watch`.
 * Requires Flutter 3.41+ / Dart 3.11 (via `shared_preferences` 2.5.6).
   `intl` stays at `>=0.20.2` so apps using `flutter_localizations` on
   Flutter 3.41–3.44 still resolve.

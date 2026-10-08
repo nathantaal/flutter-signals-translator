@@ -11,7 +11,7 @@ Widget _wrap(Widget child) =>
 Widget _hello() => SignalBuilder(builder: (_) => Text(tl('hello')));
 
 void main() {
-  final binding = TestWidgetsFlutterBinding.ensureInitialized();
+  TestWidgetsFlutterBinding.ensureInitialized();
 
   setUp(() {
     SharedPreferences.setMockInitialValues({});
@@ -41,26 +41,19 @@ void main() {
     },
   );
 
-  test('assetLocationString follows loadLocale', () async {
+  test('a native effect tracks activeAssetPath', () async {
     final translator = SignalTranslator();
+    final seen = <String?>[];
+    final dispose = effect(() {
+      seen.add(translator.activeAssetPath);
+    });
     await translator.loadLocale('nl');
-    expect(translator.assetLocationString.value, 'assets/translations/nl.json');
-  });
-
-  test('assetLocationString follows the OS locale in sys mode', () async {
-    binding.platformDispatcher.localeTestValue = const Locale('nl');
-    addTearDown(binding.platformDispatcher.clearLocaleTestValue);
-    SignalTranslator.debugReset();
-    final translator = SignalTranslator();
-    await translator.loadLocale('sys');
-    expect(translator.assetLocationString.value, 'assets/translations/nl.json');
-
-    binding.platformDispatcher.localeTestValue = const Locale('en', 'GB');
-    translator.didChangeLocales(const [Locale('en', 'GB')]);
-    expect(
-      translator.assetLocationString.value,
-      'assets/translations/en_GB.json',
-    );
+    await translator.loadLocale('en');
+    dispose();
+    expect(seen.whereType<String>(), [
+      'assets/translations/nl.json',
+      'assets/translations/en.json',
+    ]);
   });
 
   testWidgets('SignalBuilder rebuilds when the locale changes', (tester) async {
@@ -79,9 +72,6 @@ void main() {
     await tester.runAsync(() => SignalTranslator().loadLocale('nl'));
     await tester.pumpWidget(_wrap(_hello()));
     expect(find.text('Hallo'), findsOneWidget);
-    expect(
-      SignalTranslator().assetLocationString.value,
-      'assets/translations/nl.json',
-    );
+    expect(SignalTranslator().activeAssetPath, 'assets/translations/nl.json');
   });
 }

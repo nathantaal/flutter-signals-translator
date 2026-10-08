@@ -12,18 +12,6 @@
     "Current locale: {0}": "Configuración regional actual: {0}",
     "My favorite color is blue.": "Mi color favorito es azul.",
     "I took the elevator to the 5th floor.": "Tomé el ascensor al 5.º piso.",
-    "I have {0} apples": {
-      "zero": "No tengo manzanas",
-      "one": "Tengo 1 manzana",
-      "other": "Tengo {0} manzanas"
-    },
-    "I have {0} strawberries and {1} bananas": {
-      "zero_zero": "No tengo fresas ni plátanos",
-      "one_one": "Tengo 1 fresa y 1 plátano",
-      "one_other": "Tengo 1 fresa y {1} plátanos",
-      "other_one": "Tengo {0} fresas y 1 plátano",
-      "other_other": "Tengo {0} fresas y {1} plátanos"
-    },
     "ICU Examples": "Ejemplos de ICU",
     "inbox_count": "Tienes {0, plural, =0 {ningún mensaje} one {# mensaje} other {# mensajes}} en tu bandeja.",
     "winner_announcement": "¡{0, plural, one {Hay # ganador} other {Hay # ganadores}}!",

@@ -24,7 +24,7 @@ abstract class TranslatorCore with WidgetsBindingObserver {
     _ready = _initialize()..ignore();
   }
 
-  late final SharedPreferences prefs;
+  late final SharedPreferences _prefs;
   // Resolves to null when SharedPreferences failed to load.
   final Completer<SharedPreferences?> _prefsCompleter = Completer();
   late final Future<void> _ready;
@@ -53,11 +53,8 @@ abstract class TranslatorCore with WidgetsBindingObserver {
   /// and is normalized to canonical form when consulted. If the fallback is
   /// itself regional (e.g. `'fr_CA'`), its bare-language form (`'fr'`) is
   /// tried as well — so the full chain on a miss is
-  /// `<requested> → <raw-input> → <bare-of-requested> → <fallback> → <bare-of-fallback>`,
-  /// deduplicated. The `<raw-input>` step probes the caller's
-  /// pre-normalization string (e.g. `'en-gb'`) so apps that shipped legacy
-  /// hyphen-named assets keep loading; it's skipped when the raw input is
-  /// the `'sys'` sentinel or equals the canonical form. Set
+  /// `<requested> → <bare-of-requested> → <fallback> → <bare-of-fallback>`,
+  /// deduplicated. Only canonical asset names (`en_GB.json`) are probed. Set
   /// [fallbackLocale] before the first [loadLocale] call (or bundle a
   /// matching asset) to customise it.
   String fallbackLocale = 'en';
@@ -117,26 +114,19 @@ abstract class TranslatorCore with WidgetsBindingObserver {
     return _assetPath(locale);
   }
 
-  /// Asset path for the requested locale, before fallback. Adapters wrap
-  /// this in their framework's computed to expose `assetLocationString`.
-  @protected
-  String get requestedAssetPath => _assetPath(
-    _chosenLocale.value == 'sys' ? _deviceLocale.value : _chosenLocale.value,
-  );
-
   /// Detaches this instance from [WidgetsBinding]. Adapters call this when
   /// retiring a singleton in `debugReset()`.
   @protected
   void detachObserver() => _detachObserver();
 
-  /// The currently loaded translation map. Exposed for [translate] /
-  /// [translatePlural]; don't read from external code —
-  /// use the adapter's `tl` / `tlv` / `tlvm` instead.
+  /// The currently loaded translation map. Exposed for [translate]; don't
+  /// read from external code — use the adapter's `tl` / `tlv` / `tlvm`
+  /// instead.
   Map<String, dynamic> get internalTranslations => _translations.value;
 
   Future<void> _initialize() async {
     try {
-      prefs = await SharedPreferences.getInstance();
+      _prefs = await SharedPreferences.getInstance();
     } catch (e) {
       _prefsCompleter.complete(null);
       debugPrint(
@@ -144,7 +134,7 @@ abstract class TranslatorCore with WidgetsBindingObserver {
       );
       rethrow;
     }
-    _prefsCompleter.complete(prefs);
+    _prefsCompleter.complete(_prefs);
     await _loadLocaleFromStorage();
   }
 
@@ -198,7 +188,7 @@ abstract class TranslatorCore with WidgetsBindingObserver {
   }
 
   Future<void> _loadLocaleFromStorage() async {
-    final locale = prefs.getString('locale');
+    final locale = _prefs.getString('locale');
     if (locale != null) {
       // Skip the non-canonical warning for values already in storage — the
       // developer can't act on it on every cold start. The warning still
@@ -220,15 +210,13 @@ abstract class TranslatorCore with WidgetsBindingObserver {
   Future<void> _applyLocale(String locale) async {
     _ensureObserverAttached();
     _chosenLocale.value = normalizeLocale(locale);
-    // Persist the caller's original form (e.g. 'en-gb' or 'sys'). Keeping
-    // the raw string lets apps shipping legacy hyphen-separated assets
-    // (`en-gb.json`) keep working across restarts, and avoids silently
-    // rewriting prefs values stored by older versions.
-    await _saveLocaleToStorage(locale);
-    await _reloadTranslationsForResolvedLocale(rawIntent: locale);
+    // Persist the canonical form; a raw value stored by an older version
+    // (e.g. 'en-gb') is rewritten the first time it's loaded.
+    await _saveLocaleToStorage(_chosenLocale.value);
+    await _reloadTranslationsForResolvedLocale();
   }
 
-  Future<void> _reloadTranslationsForResolvedLocale({String? rawIntent}) async {
+  Future<void> _reloadTranslationsForResolvedLocale() async {
     final token = ++_reloadSeq;
 
     // Resolve 'sys' to the device locale via the reactive signal, which is
@@ -246,14 +234,6 @@ abstract class TranslatorCore with WidgetsBindingObserver {
     }
 
     addCandidate(resolved);
-    // Backwards compat: probe the caller's raw input (e.g. legacy
-    // `en-gb`) before falling through to bare-language / fallback, so
-    // apps that shipped hyphen-named assets keep finding them. Skip the
-    // 'sys' sentinel — it isn't a real locale spelling and was never a
-    // valid asset name.
-    if (rawIntent != null && rawIntent != 'sys') {
-      addCandidate(rawIntent);
-    }
     for (final candidate in localeFallbackCandidates(resolved)) {
       addCandidate(candidate);
     }

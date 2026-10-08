@@ -25,7 +25,7 @@ identical API:
 Licensed under a MIT License.
 
 ## (Non) features
-* Supports singular and pluralization (via inline ICU format; nested JSON keys are deprecated)
+* Supports singular and pluralization (via inline ICU format)
 * ICU-style `plural` and `select` blocks embedded directly in translation strings
 * Display app in system language by default
 * Support setting a different language
@@ -121,39 +121,13 @@ Text(tlv('{0} has won the game!', 'David'));
 Text(tlvm('He came in {0}, while his partner came in at the {1} place', ['first', 'second']));
 ```
 
-### Pluralization (tlp) — deprecated
-
-> **Deprecated.** Use `tlv` with an ICU plural block instead (see [ICU message format](#icu-message-format) below).
-
-```dart
-// Before
-Text(tlp('I have {0} apples', 5));
-
-// After — flat ICU string + tlv
-// "apples": "{0, plural, =0 {I have no apples} one {I have # apple} other {I have # apples}}"
-Text(tlv('apples', '5'));
-```
-
-### Pluralization with multiple counts (tlpm) — deprecated
-
-> **Deprecated.** Use `tlvm` with ICU plural blocks instead (see [ICU message format](#icu-message-format) below).
-
-```dart
-// Before
-Text(tlpm('I have {0} strawberries and {1} bananas', [2, 3]));
-
-// After — flat ICU string + tlvm
-// "fruit": "{0, plural, =0 {no strawberries} one {# strawberry} other {# strawberries}} and {1, plural, =0 {no bananas} one {# banana} other {# bananas}}"
-Text(tlvm('fruit', ['2', '3']));
-```
-
 ---
 
 ## ICU message format
 
 ICU-style `{N, plural, ...}`, `{N, selectordinal, ...}` and `{N, select, ...}` blocks can be embedded directly inside any translation string value. They are resolved automatically by `tl`, `tlv`, and `tlvm` — no separate function needed.
 ICU is a recognized international standard.
-This solves problems the nested-JSON plural approach cannot, such as **verb agreement** ("There *is* 1 winner" vs "There *are* 5 winners") where the entire sentence structure changes, not just a noun.
+It also handles **verb agreement** ("There *is* 1 winner" vs "There *are* 5 winners") where the entire sentence structure changes, not just a noun.
 
 ### Syntax
 
@@ -182,7 +156,7 @@ This solves problems the nested-JSON plural approach cannot, such as **verb agre
 
 ### Example: verb agreement (is / are)
 
-The nested-JSON approach cannot express verb changes because the *whole* sentence structure differs. ICU handles it naturally.
+Each form holds the *whole* sentence, so the verb can change along with the noun.
 
 **en.json**
 ```json
@@ -285,18 +259,6 @@ Text(tlvm('order_line', ['1', '\$9.99'])); // 1 item costing $9.99
 Text(tlvm('order_line', ['3', '\$4.50'])); // 3 items costing $4.50 each
 ```
 
-### ICU vs nested-JSON pluralization
-
-> **The nested-JSON approach (`tlp`/`tlpm`) is deprecated.** Prefer ICU inline for all new translation keys. Both formats still work and can coexist in the same file during migration. `tlv`/`tlvm` also read keys that are still in the nested-JSON format (selecting `zero`/`one`/`other` the same way `tlp` does), so you can switch a call site to `tlv` before every locale file has been converted.
-
-| | Nested JSON (`tlp`/`tlpm`) ⚠️ deprecated | ICU inline (`tl`/`tlv`/`tlvm`) |
-|---|---|---|
-| Verb agreement | No | Yes |
-| Exact match (`=0`, `=1` …) | No | Yes |
-| `select` (gender, category) | No | Yes |
-| Multiple counts in one string | Underscore-joined keys | Natural |
-| Format lives in | JSON structure | Translation string |
-
 ---
 
 ## Regional locales
@@ -324,7 +286,9 @@ means you can introduce regional files incrementally. Then you can use this othe
 when formatting dates per region, while still using the generic `en` translations for text.
 
 Input is case- and separator-tolerant: `'en_GB'`, `'en-gb'`, and `'EN_gB'`
-all resolve to the same canonical form. Non-canonical input logs a one-line
+all resolve to the same canonical form, which is what gets loaded
+(`en_GB.json`) and persisted. Asset files must use the canonical name; a
+hyphen-named `en-gb.json` is not found. Non-canonical input logs a one-line
 `debugPrint` warning so typos are visible in debug builds.
 
 Wiring from `MaterialApp`'s `Locale` is a one-liner:

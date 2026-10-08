@@ -262,14 +262,6 @@ class _IcuExampleScreenState extends State<IcuExampleScreen> {
       ['2', 'Ann'],
       'Ann and 1 other',
     ),
-    _EdgeCase(
-      title: 'tlv on a key still in the nested-map (tlp) format',
-      template: 'I have {0} apples',
-      values: const ['0'],
-      // ignore: deprecated_member_use
-      expected: tlp('I have {0} apples', 0) ?? '',
-      actual: _attempt(() => tlv('I have {0} apples', '0')),
-    ),
   ];
 
   _EdgeCase _icuCase(

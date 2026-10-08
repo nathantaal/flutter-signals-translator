@@ -20,12 +20,7 @@ class SignalTranslator extends TranslatorCore {
     _current = SignalTranslator._internal();
   }
 
-  SignalTranslator._internal() : super(_alienCell) {
-    assetLocationString = computed((_) => requestedAssetPath);
-  }
-
-  /// Asset path for the requested locale, before fallback.
-  late final Computed<String> assetLocationString;
+  SignalTranslator._internal() : super(_alienCell);
 
   void _retire() => detachObserver();
 }
@@ -62,29 +57,3 @@ String tlv(String key, String variable) =>
 /// never re-read as placeholders.
 String tlvm(String key, List<String> variables) =>
     translate(SignalTranslator(), key, variables);
-
-/// Translates a pluralized key for a single count using the current locale.
-///
-/// **Deprecated:** Use [tlv] with an ICU plural block in the translation
-/// string instead. Replace the nested JSON object:
-/// ```json
-/// "apples": { "zero": "No apples", "one": "One apple", "other": "{0} apples" }
-/// ```
-/// with a flat ICU string:
-/// ```json
-/// "apples": "{0, plural, =0 {No apples} one {# apple} other {# apples}}"
-/// ```
-/// and call `tlv('apples', count.toString())`.
-@Deprecated(tlpDeprecationMessage)
-String? tlp(String key, int count) =>
-    translatePlural(SignalTranslator(), key, [count]);
-
-/// Translates a pluralized key for multiple counts using the current locale.
-///
-/// **Deprecated:** Use [tlvm] with ICU plural blocks in the translation
-/// string instead. Replace the nested underscore-keyed JSON object with
-/// inline ICU strings and call
-/// `tlvm(key, counts.map((c) => c.toString()).toList())`.
-@Deprecated(tlpmDeprecationMessage)
-String? tlpm(String key, List<int> counts) =>
-    translatePlural(SignalTranslator(), key, counts);
