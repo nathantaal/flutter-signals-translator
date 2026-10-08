@@ -165,7 +165,7 @@ class ExampleApp extends StatelessWidget {
                                 Text(tlv('{0} has won the game', 'David')),
                                 SizedBox(height: 8),
                                 Text(
-                                  'Translate with multiple variables (tlmv) example:',
+                                  'Translate with multiple variables (tlvm) example:',
                                   style: TextStyle(fontWeight: FontWeight.bold),
                                 ),
                                 Text(
