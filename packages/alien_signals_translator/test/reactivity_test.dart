@@ -20,6 +20,7 @@ void main() {
       'assets/translations/en.json': kHelloEn,
       'assets/translations/en_GB.json': kHelloEn,
       'assets/translations/nl.json': kHelloNl,
+      'shared/en.json': kHelloEn,
     });
     SignalTranslator.debugReset();
   });
@@ -50,10 +51,13 @@ void main() {
     });
     await translator.loadLocale('nl');
     await translator.loadLocale('en');
+    translator.translationsPath = 'shared';
+    await translator.loadLocale('en');
     stop();
     expect(seen.whereType<String>(), [
       'assets/translations/nl.json',
       'assets/translations/en.json',
+      'shared/en.json',
     ]);
   });
 

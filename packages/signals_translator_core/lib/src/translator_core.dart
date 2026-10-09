@@ -17,7 +17,8 @@ abstract class TranslatorCore with WidgetsBindingObserver {
     : _translations = cell<Map<String, dynamic>>({}),
       _chosenLocale = cell<String>('sys'),
       _deviceLocale = cell<String>(composeDeviceLocale()),
-      _activeLocale = cell<String?>(null) {
+      _activeLocale = cell<String?>(null),
+      _activeAssetPath = cell<String?>(null) {
     _ensureObserverAttached();
     // The error stays observable through [ready]; ignore() only stops it from
     // being reported as unhandled when nobody awaits it.
@@ -41,6 +42,9 @@ abstract class TranslatorCore with WidgetsBindingObserver {
   final ReactiveCell<String> _chosenLocale;
   final ReactiveCell<String> _deviceLocale;
   final ReactiveCell<String?> _activeLocale;
+  // Stored rather than derived from [translationsPath], which can change
+  // after a load and isn't reactive.
+  final ReactiveCell<String?> _activeAssetPath;
 
   // Monotonic counter that lets a later [_reloadTranslationsForResolvedLocale]
   // call invalidate an in-flight earlier one — so a slow stale asset load can't
@@ -107,12 +111,9 @@ abstract class TranslatorCore with WidgetsBindingObserver {
   /// could be resolved.
   String? get activeLocale => _activeLocale.value;
 
-  /// Asset path that was actually loaded most recently.
-  String? get activeAssetPath {
-    final locale = _activeLocale.value;
-    if (locale == null) return null;
-    return _assetPath(locale);
-  }
+  /// Asset path that was actually loaded most recently, or `null` if none
+  /// could be resolved.
+  String? get activeAssetPath => _activeAssetPath.value;
 
   /// Detaches this instance from [WidgetsBinding]. Adapters call this when
   /// retiring a singleton in `debugReset()`.
@@ -248,6 +249,7 @@ abstract class TranslatorCore with WidgetsBindingObserver {
         if (token != _reloadSeq) return;
         _translations.value = translations;
         _activeLocale.value = candidate;
+        _activeAssetPath.value = path;
         return;
       } on FlutterError {
         if (token != _reloadSeq) return;
@@ -261,6 +263,7 @@ abstract class TranslatorCore with WidgetsBindingObserver {
     }
     if (token != _reloadSeq) return;
     _activeLocale.value = null;
+    _activeAssetPath.value = null;
     _clearTranslations();
   }
 

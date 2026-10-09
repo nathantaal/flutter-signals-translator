@@ -59,7 +59,7 @@ dependencies:
 
   [...]
 
-  flutter:
+flutter:
   assets:
     - assets/translations/
 ```

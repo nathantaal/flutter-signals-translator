@@ -261,6 +261,16 @@ void runTranslatorConformance(TranslatorHarness h) {
       expect(signalTranslator!.activeAssetPath, '$sharedPath/en.json');
     });
 
+    test('activeAssetPath keeps the loaded file when the path changes '
+        'afterwards', () async {
+      useAssets({'assets/translations/nl.json': mockNLJson});
+      await signalTranslator!.loadLocale('nl');
+
+      signalTranslator!.translationsPath = sharedPath;
+
+      expect(signalTranslator!.activeAssetPath, 'assets/translations/nl.json');
+    });
+
     test('ignores a trailing slash', () async {
       useAssets({'$sharedPath/nl.json': mockNLJson});
       signalTranslator!.translationsPath = '$sharedPath/';
