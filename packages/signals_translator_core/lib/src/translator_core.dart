@@ -51,6 +51,10 @@ abstract class TranslatorCore with WidgetsBindingObserver {
   // overwrite the result of a newer reload.
   int _reloadSeq = 0;
 
+  // Set once any locale is applied, so the startup load of the system locale
+  // doesn't repeat a [loadLocale] call made before SharedPreferences loaded.
+  bool _localeApplied = false;
+
   /// Locale used to load translations when the requested locale's asset (and
   /// its bare-language variant, if regional) cannot be resolved. Defaults to
   /// `'en'`. Accepts the same case/separator-tolerant input as [loadLocale]
@@ -79,13 +83,13 @@ abstract class TranslatorCore with WidgetsBindingObserver {
 
   String get currentLocale => _chosenLocale.value;
 
-  /// Completes once SharedPreferences has loaded and the stored locale, if
-  /// any, has been applied — so its translations are available.
+  /// Completes once SharedPreferences has loaded and the startup locale has
+  /// been applied — the stored locale, or the system locale when none is
+  /// stored — so its translations are available.
   ///
-  /// Completes with an error when SharedPreferences can't be loaded.
-  /// Translation keeps working in that case; locale choices just aren't
-  /// persisted. With no stored locale nothing is loaded at startup; call
-  /// [loadLocale] (e.g. with `'sys'`) to load one.
+  /// Completes with an error when SharedPreferences can't be loaded. The
+  /// system locale is still loaded first, so translation keeps working;
+  /// locale choices just aren't persisted.
   Future<void> get ready => _ready;
 
   /// Returns the current locale reported by the operating system.
@@ -133,6 +137,7 @@ abstract class TranslatorCore with WidgetsBindingObserver {
       debugPrint(
         'signals_translator: SharedPreferences unavailable; locale choices will not persist ($e)',
       );
+      await _loadSystemLocaleIfUnchosen();
       rethrow;
     }
     _prefsCompleter.complete(_prefs);
@@ -195,7 +200,16 @@ abstract class TranslatorCore with WidgetsBindingObserver {
       // developer can't act on it on every cold start. The warning still
       // fires on direct loadLocale() calls.
       await _applyLocale(locale);
+    } else {
+      await _loadSystemLocaleIfUnchosen();
     }
+  }
+
+  // Follows the system without persisting it, so nothing is stored until the
+  // user makes a choice.
+  Future<void> _loadSystemLocaleIfUnchosen() async {
+    if (_localeApplied) return;
+    await _reloadTranslationsForResolvedLocale();
   }
 
   Future<void> loadLocale(String locale) async {
@@ -209,6 +223,7 @@ abstract class TranslatorCore with WidgetsBindingObserver {
   }
 
   Future<void> _applyLocale(String locale) async {
+    _localeApplied = true;
     _ensureObserverAttached();
     _chosenLocale.value = normalizeLocale(locale);
     // Persist the canonical form; a raw value stored by an older version

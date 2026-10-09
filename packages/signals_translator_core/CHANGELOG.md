@@ -11,6 +11,9 @@
     rewritten on the next start.
   * `prefs` is private. There is no `requestedAssetPath`, and adapters no
     longer expose `assetLocationString`; use `activeAssetPath`.
+* With no stored locale, the system locale is now loaded at startup (it
+  is not persisted). Before, nothing was loaded until `loadLocale` was
+  called. This also happens when SharedPreferences fails to load.
 * New `translationsPath` setting to load translation files from another
   directory, such as a shared package's assets
   (`packages/<name>/assets/translations`).

@@ -460,7 +460,9 @@ void runTranslatorConformance(TranslatorHarness h) {
     test('candidate list dedupes when requested equals fallback', () async {
       // Wire a counting asset handler so we can assert en.json is only fetched
       // once even though it appears as both the bare-language step and the
-      // fallback step for input 'en' with fallbackLocale 'en'.
+      // fallback step for input 'en' with fallbackLocale 'en'. Wait for the
+      // startup load first so it isn't counted.
+      await signalTranslator!.ready;
       final hitCounts = <String, int>{};
       TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
           .setMockMessageHandler('flutter/assets', (message) async {
@@ -1311,5 +1313,32 @@ void runTranslatorConformance(TranslatorHarness h) {
 
       expect(tl('Dutch'), 'Nederlands');
     });
+
+    test('loads the system locale when no locale is stored', () async {
+      h.reset();
+      final translator = h.create();
+
+      await translator.ready;
+
+      expect(translator.currentLocale, 'sys');
+      expect(translator.activeLocale, 'en');
+      final prefs = await SharedPreferences.getInstance();
+      expect(prefs.getString('locale'), isNull);
+    });
+
+    test(
+      'still loads the system locale when SharedPreferences fails to load',
+      () async {
+        SharedPreferencesStorePlatform.instance = _FailingPreferencesStore();
+        SharedPreferences.resetStatic();
+        addTearDown(() => SharedPreferences.setMockInitialValues({}));
+        h.reset();
+        final translator = h.create();
+
+        await expectLater(translator.ready, throwsA(anything));
+
+        expect(translator.activeLocale, 'en');
+      },
+    );
   });
 }

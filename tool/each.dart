@@ -7,6 +7,7 @@ import 'dart:io';
 const directories = [
   'packages/signals_translator_core',
   'tool/translator_conformance',
+  'tool/example_translations',
   'packages/signals_translator',
   'packages/signals_translator/example',
   'packages/alien_signals_translator',

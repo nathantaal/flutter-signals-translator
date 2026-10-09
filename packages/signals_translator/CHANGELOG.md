@@ -32,6 +32,10 @@
 
 ### Other changes
 
+* **The system locale is now loaded at startup when no locale is stored.**
+  Before, `tl` returned keys until `loadLocale` was called, even though
+  `currentLocale` was `'sys'`. The system locale is not persisted, and it is
+  also loaded when SharedPreferences fails to load.
 * Internals moved to the new `signals_translator_core` package.
 * New sibling packages with the same API: `alien_signals_translator` and
   `solidart_translator`.
