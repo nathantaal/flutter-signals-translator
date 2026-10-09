@@ -3,7 +3,6 @@ name: Publish to pub.dev
 on:
   push:
     tags: ['v[0-9]+.[0-9]+.[0-9]+*']
-  workflow_dispatch:
 
 permissions:
   contents: read
@@ -26,21 +25,14 @@ jobs:
         with:
           channel: stable
 
-      - run: flutter pub get
-      - run: flutter analyze
+      - name: Check versions and core constraints match the tag
+        run: CHECK_ONLY=1 bash tool/publish.sh
 
-      - name: Export pub.dev OIDC token
-        uses: actions/github-script@v7
-        with:
-          script: |
-            const token = await core.getIDToken('https://pub.dev');
-            core.setSecret(token);
-            core.exportVariable('PUB_TOKEN', token);
-
-      - name: Configure pub.dev credentials
-        run: dart pub token add https://pub.dev --env-var PUB_TOKEN
-
-      - run: dart pub publish --force
+      # Publishes core, waits for it on pub.dev, then the adapters against the
+      # hosted core. Fetches a fresh OIDC token per publish and skips versions
+      # already on pub.dev, so a failed run can simply be re-run.
+      - name: Publish
+        run: bash tool/publish.sh
 
   release:
     needs: publish

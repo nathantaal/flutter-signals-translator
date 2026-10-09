@@ -1,0 +1,22 @@
+name: signals_translator_core
+description: "Framework-agnostic core of signals_translator: locale resolution, JSON loading and ICU lookup. Depend on an adapter package instead."
+version: 1.0.0
+homepage: https://github.com/nathantaal/flutter-signals-translator
+repository: https://github.com/nathantaal/flutter-signals-translator/tree/master/packages/signals_translator_core
+
+environment:
+  sdk: ^3.11.0
+  flutter: ">=3.41.0"
+
+dependencies:
+  flutter:
+    sdk: flutter
+  intl: ">=0.20.2 <0.21.0"
+  shared_preferences: ^2.5.6
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^6.0.0
+  translator_conformance:
+    path: ../../tool/translator_conformance

@@ -1,0 +1,5 @@
+dependency_overrides:
+  signals_translator:
+    path: ..
+  signals_translator_core:
+    path: ../../signals_translator_core

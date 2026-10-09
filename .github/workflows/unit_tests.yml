@@ -13,7 +13,20 @@ permissions:
 jobs:
   test:
     runs-on: ubuntu-latest
-
+    strategy:
+      fail-fast: false
+      matrix:
+        dir:
+          - packages/signals_translator_core
+          - packages/signals_translator
+          - packages/signals_translator/example
+          - packages/alien_signals_translator
+          - packages/alien_signals_translator/example
+          - packages/solidart_translator
+          - packages/solidart_translator/example
+    defaults:
+      run:
+        working-directory: ${{ matrix.dir }}
     steps:
       - uses: actions/checkout@v4
 
@@ -21,14 +34,6 @@ jobs:
         with:
           channel: stable
 
-      - name: Install dependencies
-        run: flutter pub get
-
-      - name: Run tests
-        run: flutter test
-
-      - name: Run example tests
-        working-directory: example
-        run: |
-          flutter pub get
-          flutter test
+      - run: flutter pub get
+      - run: flutter analyze
+      - run: flutter test
