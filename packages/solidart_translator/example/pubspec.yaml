@@ -13,7 +13,7 @@ dependencies:
   example_translations:
     path: ../../../tool/example_translations
   flutter_solidart: ^2.7.4
-  solidart_translator: ^0.2.0
+  solidart_translator: ^1.0.0
 
 dev_dependencies:
   flutter_test:

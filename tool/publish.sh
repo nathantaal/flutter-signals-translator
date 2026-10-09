@@ -4,8 +4,8 @@
 # safe: versions already on pub.dev are skipped.
 #
 # Local checks (never publishes, never touches pubspec_overrides.yaml):
-#   CHECK_ONLY=1 GITHUB_REF_NAME=v0.2.0 bash tool/publish.sh
-#   PUBLISH_DRY_RUN=1 GITHUB_REF_NAME=v0.2.0 bash tool/publish.sh
+#   CHECK_ONLY=1 GITHUB_REF_NAME=v1.0.0 bash tool/publish.sh
+#   PUBLISH_DRY_RUN=1 GITHUB_REF_NAME=v1.0.0 bash tool/publish.sh
 set -euo pipefail
 cd "$(dirname "$0")/.."
 

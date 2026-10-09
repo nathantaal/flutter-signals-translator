@@ -1,5 +1,3 @@
-**Until this package reaches 1.0.0, every version update *could* contain breaking changes. I'll try to deprecate things a few versions ahead**
-
 # Signal translator
 This is a translation package for the Signals framework. It's not a pluralization package.
 
@@ -55,7 +53,7 @@ Licensed under a MIT License.
 3. Add the following to your `pubspec.yaml` file:
 ```yaml
 dependencies:
-  signals_translator: ^0.2.0
+  signals_translator: ^1.0.0
 
   [...]
 
@@ -119,10 +117,10 @@ Text(tlv('{0} has won the game!', 'David'));
 Text(tlvm('He came in {0}, while his partner came in at the {1} place', ['first', 'second']));
 ```
 
-### Migrating from tlp/tlpm (removed in 0.2.0)
+### Migrating from tlp/tlpm (removed in 1.0.0)
 
 `tlp` and `tlpm` and the nested `zero`/`one`/`other` JSON format were removed
-in 0.2.0. A nested object is no longer read and the key is shown instead.
+in 1.0.0. A nested object is no longer read and the key is shown instead.
 Replace each one with an inline ICU string and call `tlv`/`tlvm`:
 
 ```json

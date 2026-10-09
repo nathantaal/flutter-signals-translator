@@ -1,6 +1,6 @@
 name: solidart_translator
 description: "JSON-based i18n with ICU message format for Flutter, powered by solidart. Same API as signals_translator."
-version: 0.2.0
+version: 1.0.0
 homepage: https://github.com/nathantaal/flutter-signals-translator
 repository: https://github.com/nathantaal/flutter-signals-translator/tree/master/packages/solidart_translator
 
@@ -12,7 +12,7 @@ dependencies:
   flutter:
     sdk: flutter
   solidart: ^2.8.6
-  signals_translator_core: ^0.2.0
+  signals_translator_core: ^1.0.0
 
 dev_dependencies:
   flutter_test:

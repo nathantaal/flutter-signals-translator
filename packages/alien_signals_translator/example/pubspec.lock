@@ -23,7 +23,7 @@ packages:
       path: ".."
       relative: true
     source: path
-    version: "0.2.0"
+    version: "1.0.0"
   analysis_server_plugin:
     dependency: transitive
     description:
@@ -388,7 +388,7 @@ packages:
       path: "../../signals_translator_core"
       relative: true
     source: path
-    version: "0.2.0"
+    version: "1.0.0"
   sky_engine:
     dependency: transitive
     description: flutter

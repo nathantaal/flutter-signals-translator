@@ -1,5 +1,3 @@
-**Until this package reaches 1.0.0, every version update *could* contain breaking changes. I'll try to deprecate things a few versions ahead**
-
 # Alien signals translator
 This is a translation package for alien_signals. It's not a pluralization package.
 
@@ -55,7 +53,7 @@ Licensed under a MIT License.
 3. Add the following to your `pubspec.yaml` file:
 ```yaml
 dependencies:
-  alien_signals_translator: ^0.2.0
+  alien_signals_translator: ^1.0.0
   oref: ^2.10.0
 
   [...]

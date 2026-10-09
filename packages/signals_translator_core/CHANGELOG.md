@@ -1,4 +1,4 @@
-## 0.2.0
+## 1.0.0
 
 * Initial release. Extracted from signals_translator 0.1.0.
 * **BREAKING** (compared to signals_translator 0.1.0):
