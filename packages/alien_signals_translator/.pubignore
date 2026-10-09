@@ -1,0 +1,3 @@
+# Local-development overrides point at sibling packages; never publish them.
+pubspec_overrides.yaml
+example/pubspec_overrides.yaml
