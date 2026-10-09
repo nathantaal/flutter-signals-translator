@@ -45,6 +45,9 @@ publish() { # <package>, run from its directory
     fresh_token
     dart pub token add https://pub.dev --env-var PUB_TOKEN
     dart pub publish --force
+    # The saved token reads PUB_TOKEN, which is only exported in this
+    # subshell; left in place, it breaks the next package's pub get.
+    dart pub token remove https://pub.dev
   fi
 }
 
