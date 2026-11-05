@@ -13,16 +13,17 @@ packages:
     dependency: "direct main"
     description:
       name: alien_signals
-      sha256: "89f086368f79f294a4c09316bb594edd07e27177340628a660348dd089235aae"
+      sha256: "5b43393ff25c1fa2e88fbb8f6242fb627abc8fbcd34599887431fdaef189b4aa"
       url: "https://pub.dev"
     source: hosted
-    version: "2.3.2"
+    version: "2.4.0"
   alien_signals_translator:
     dependency: "direct main"
     description:
-      path: ".."
-      relative: true
-    source: path
+      name: alien_signals_translator
+      sha256: b07ba69ee6181ded6a9882544434efe31affa18d1922847a2b839e03f84f988a
+      url: "https://pub.dev"
+    source: hosted
     version: "1.0.0"
   analysis_server_plugin:
     dependency: transitive
@@ -385,9 +386,10 @@ packages:
   signals_translator_core:
     dependency: "direct overridden"
     description:
-      path: "../../signals_translator_core"
-      relative: true
-    source: path
+      name: signals_translator_core
+      sha256: "9ea5e799f02bad2d45ba8afb975a94ae3e2cd5a4725ef1e6300e478659401071"
+      url: "https://pub.dev"
+    source: hosted
     version: "1.0.0"
   sky_engine:
     dependency: transitive

@@ -12,7 +12,7 @@ dependencies:
   cupertino_icons: ^2.0.0
   example_translations:
     path: ../../../tool/example_translations
-  alien_signals: ^2.3.2
+  alien_signals: ^2.4.0
   alien_signals_translator: ^1.0.0
   oref: ^2.10.0
 
